@@ -250,7 +250,7 @@ let saved = {};
 try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch { saved = {}; }
 const learned = new Set(Array.isArray(saved.learned) ? saved.learned.filter(value => typeof value === 'string') : []);
 const activity = new Set(Array.isArray(saved.activity) ? saved.activity.filter(value => typeof value === 'string') : []);
-const state = {view:'lessons',script:'hira',row:0,char:0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0};
+const state = {view:'lessons',script:'hira',row:0,char:0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:'characters',sentenceQueue:[],sentenceIndex:0,translationRevealed:false};
 const app = document.querySelector('#app');
 let strokePlayer = null;
 const scriptName = () => state.script === 'hira' ? 'Hiragana' : 'Katakana';
@@ -456,7 +456,7 @@ function renderParticles() {
   return `<p class="greeting">じょし / Small words, important work</p><div class="page-head"><div><h1>Particles connect the pieces.</h1><p>A particle follows a word or phrase and shows how it works in the sentence.</p></div></div><div class="particle-note"><strong>A helpful starting point</strong><p>Particles do not map neatly to one English word. Learn the job each one does in its sentence. A few are pronounced differently from their usual kana sound: は as a particle is wa, へ is e, and を is usually o.</p></div><div class="particle-grid">${particleLessons.map(particle => `<article class="particle-card"><div class="particle-card-head"><span class="particle-symbol" lang="ja">${particle.jp}</span><div><span class="particle-sound">${particle.sound}</span><h2>${particle.name}</h2></div></div><p class="particle-description">${particle.description}</p><button class="particle-open-examples" type="button" data-action="particle-examples" data-value="${particle.jp}" aria-label="View five example sentences for ${particle.jp}, ${particle.name}">View 5 examples ${icon('arrow')}</button></article>`).join('')}</div><dialog class="particle-dialog" id="particle-dialog" aria-labelledby="particle-dialog-title"><div class="particle-dialog-head"><div><span class="eyebrow">PARTICLE EXAMPLES</span><h2 id="particle-dialog-title"></h2></div><form method="dialog"><button class="particle-dialog-close" aria-label="Close examples">Close</button></form></div><div class="particle-dialog-content" id="particle-dialog-content"></div></dialog>`;
 }
 function renderParticleExample(example,index) {
-  return `<article class="particle-example"><span class="eyebrow">EXAMPLE ${index+1}</span><p class="particle-japanese" lang="ja">${example.jp}</p><p class="particle-romaji">${example.romaji}</p><p class="particle-meaning">${example.meaning}</p><div class="particle-vocabulary"><span>Vocabulary:</span>${example.words.map(term => { const word=vocabulary.find(item => item.jp===term); return word?`<span class="particle-word" lang="ja" title="${word.en}">${word.jp}<small>${word.en}</small></span>`:''; }).join('')}</div></article>`;
+  return `<article class="particle-example"><span class="eyebrow">EXAMPLE ${index+1}</span><p class="particle-japanese" lang="ja">${example.jp}</p><button class="text-button particle-example-reveal" data-action="reveal-particle-example" aria-expanded="false">Reveal reading &amp; English translation</button><div class="particle-example-answer" data-example-answer role="status" tabindex="-1" hidden><p class="particle-romaji">${example.romaji}</p><p class="particle-meaning">${example.meaning}</p><div class="particle-vocabulary"><span>Vocabulary:</span>${example.words.map(term => { const word=vocabulary.find(item => item.jp===term); return word?`<span class="particle-word" lang="ja" title="${word.en}">${word.jp}<small>${word.en}</small></span>`:''; }).join('')}</div></div></article>`;
 }
 function openParticleExamples(particleCharacter) {
   const particle=particleLessons.find(item => item.jp===particleCharacter);
@@ -473,17 +473,33 @@ function shuffle(items) {
 }
 function startQuiz() {
   const pool = characters();
-  const known = pool.filter(item => learned.has(item.character));
-  const eligible = known.length>=5 ? known : pool.filter(item => item.row===state.row);
-  const questions = shuffle(eligible).slice(0,10).map(item => ({...item,options:shuffle([item.sound,...shuffle(pool.filter(other => other.sound!==item.sound)).slice(0,3).map(other => other.sound)])}));
+  const questions = shuffle(pool).slice(0,10).map(item => ({...item,options:shuffle([item.sound,...shuffle(pool.filter(other => other.sound!==item.sound)).slice(0,3).map(other => other.sound)])}));
   state.quiz = {questions,index:0,score:0,answer:null};
 }
+function sentencePracticePool() {
+  const examples=particleLessons.flatMap(particle => particle.examples.map(example => ({...example,particle:particle.jp})));
+  return shuffle([...new Map(examples.map(example => [example.jp,example])).values()]);
+}
+function startSentencePractice() {
+  state.sentenceQueue=sentencePracticePool();
+  state.sentenceIndex=0;
+  state.translationRevealed=false;
+}
+function practiceModeTabs() {
+  return `<div class="practice-mode-tabs" role="group" aria-label="Practice mode"><button class="practice-mode-tab ${state.practiceMode==='characters'?'active':''}" data-action="practice-mode" data-value="characters" aria-pressed="${state.practiceMode==='characters'}">Identify kana</button><button class="practice-mode-tab ${state.practiceMode==='sentences'?'active':''}" data-action="practice-mode" data-value="sentences" aria-pressed="${state.practiceMode==='sentences'}">Translate sentences</button></div>`;
+}
 function renderPractice() {
+  const heading=`<p class="greeting">れんしゅう / A little practice</p><div class="page-head"><div><h1>Make it second nature.</h1><p>Identify kana or try translating a sentence.</p></div></div>${practiceModeTabs()}`;
+  if (state.practiceMode==='sentences') {
+    if (!state.sentenceQueue.length) startSentencePractice();
+    const sentence=state.sentenceQueue[state.sentenceIndex];
+    return `${heading}<div class="practice-layout"><section class="practice-card sentence-practice-card" aria-label="Sentence translation practice"><div class="quiz-meta"><span>TRANSLATE THIS SENTENCE</span><span>Particle: <strong lang="ja">${sentence.particle}</strong></span></div><p class="sentence-practice-prompt">Try translating it before you reveal the answer. There is no score in this mode.</p><div class="sentence-practice-japanese" lang="ja">${sentence.jp}</div><p class="sentence-practice-romaji">${sentence.romaji}</p>${state.translationRevealed?`<div class="translation-reveal" role="status"><span class="eyebrow">TRANSLATION</span><p>${sentence.meaning}</p></div>`:`<button class="text-button reveal-translation" data-action="reveal-translation">Reveal translation ${icon('arrow')}</button>`}<button class="primary-button next-sentence" data-action="next-sentence">Next sentence ${icon('arrow')}</button></section></div>`;
+  }
   if (!state.quiz) startQuiz();
   const quiz = state.quiz;
   const complete = quiz.index>=quiz.questions.length;
   const question = quiz.questions[quiz.index];
-  return `<p class="greeting">れんしゅう / A little practice</p><div class="page-head"><div><h1>Make it second nature.</h1><p>One sound at a time. Mistakes are part of the journey.</p></div></div><div class="practice-layout"><div class="practice-options"><p>${complete?'Session complete':`${scriptName()} · ${quiz.questions.length} questions`}</p>${scriptTabs()}</div><section class="practice-card" aria-label="Character recognition quiz">${complete?`
+  return `${heading}<div class="practice-layout"><div class="practice-options"><p>${complete?'Session complete':`${scriptName()} · ${quiz.questions.length} randomized characters`}</p>${scriptTabs()}</div><section class="practice-card" aria-label="Character recognition quiz">${complete?`
     <div class="completion-icon">${icon('trophy')}</div><h2 class="result-title">${quiz.score===quiz.questions.length?'Beautifully done!':'Another step forward.'}</h2><p class="result-description">${quiz.score===quiz.questions.length?'Every sound found its place.':'Keep coming back. Familiarity grows with practice.'}</p><div class="result-score">${quiz.score}<span class="muted"> / ${quiz.questions.length}</span></div><p class="muted">correct answers</p><div class="result-actions"><button class="secondary-button" data-action="view" data-value="lessons">Back to lessons</button><button class="primary-button" data-action="restart">Practice again ${icon('arrow')}</button></div>`:`
     <div class="quiz-meta"><span>QUESTION ${quiz.index+1} OF ${quiz.questions.length}</span><span>${quiz.score} correct</span></div><div class="progress-track"><div class="progress-fill" style="width:${quiz.index/quiz.questions.length*100}%"></div></div><div class="quiz-character" lang="ja">${question.character}</div><p class="quiz-prompt">Which sound matches this character?</p><div class="answer-grid">${question.options.map(option => `<button class="answer-button ${quiz.answer!==null?(option===question.sound?'correct':option===quiz.answer?'wrong':''):''}" data-action="answer" data-value="${option}" ${quiz.answer!==null?'disabled':''}>${option}</button>`).join('')}</div><div class="quiz-feedback" role="status">${quiz.answer===null?'':quiz.answer===question.sound?'That’s right. Nicely done!':`This is “${question.sound}”. You’ll get it next time.`}</div>${quiz.answer!==null?`<button class="primary-button quiz-action" data-action="next-question">${quiz.index===quiz.questions.length-1?'See results':'Next character'} ${icon('arrow')}</button>`:''}`}</section></div>`;
 }
@@ -519,6 +535,25 @@ app.addEventListener('click', event => {
   if (action.startsWith('stroke-')) { strokePlayer?.handle(action,Number(button.dataset.index)); return; }
   if (action==='speak') { speak(button.dataset.text); return; }
   if (action==='particle-examples') { openParticleExamples(button.dataset.value); return; }
+  if (action==='reveal-particle-example') {
+    const answer=button.closest('.particle-example')?.querySelector('[data-example-answer]');
+    if (!answer) return;
+    answer.hidden=!answer.hidden;
+    button.setAttribute('aria-expanded',String(!answer.hidden));
+    button.textContent=answer.hidden?'Reveal reading & English translation':'Hide reading & English translation';
+    return;
+  }
+  if (action==='practice-mode') {
+    state.practiceMode=button.dataset.value;
+    if (state.practiceMode==='sentences') startSentencePractice();
+    else state.quiz=null;
+  }
+  if (action==='reveal-translation') state.translationRevealed=true;
+  if (action==='next-sentence') {
+    state.sentenceIndex++;
+    if (state.sentenceIndex>=state.sentenceQueue.length) startSentencePractice();
+    else state.translationRevealed=false;
+  }
   if (action==='home') { event.preventDefault(); state.view='lessons'; }
   if (action==='view') { state.view=button.dataset.value; window.scrollTo({top:0,behavior:'instant'}); }
   if (action==='script') { state.script=button.dataset.value; state.char=0; state.quiz=null; }
