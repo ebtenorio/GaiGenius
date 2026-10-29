@@ -217,10 +217,33 @@ const additionalVocabulary = [
   ['マンション','manshon','condominium','Places','kata'],
   ['ビザ','biza','visa','Places','kata'],
   ['パスポート','pasupōto','passport','Places','kata'],
-  ['\u30c1\u30e7\u30b3\u30ec\u30fc\u30c8','chokor?to','chocolate','Food','kata'],
+  ['\u30c1\u30e7\u30b3\u30ec\u30fc\u30c8','chokor\u0113to','chocolate','Food','kata'],
   ['オムレツ','omuretsu','omelet','Food','kata'],
 ].map(([jp,romaji,en,category,script]) => ({jp,romaji:romaji.trim(),en,category,script}));
-vocabulary.push(...additionalVocabulary);
+const partsOfSpeechVocabulary = [
+  ['おおきい','ōkii','big','Adjectives'],['ちいさい','chiisai','small','Adjectives'],['あたらしい','atarashii','new','Adjectives'],['ふるい','furui','old','Adjectives'],['いい','ii','good','Adjectives'],
+  ['わるい','warui','bad','Adjectives'],['あつい','atsui','hot (weather)','Adjectives'],['さむい','samui','cold (weather)','Adjectives'],['つめたい','tsumetai','cold (to the touch)','Adjectives'],['あたたかい','atatakai','warm','Adjectives'],
+  ['すずしい','suzushii','cool (weather)','Adjectives'],['たかい','takai','high; expensive','Adjectives'],['やすい','yasui','inexpensive','Adjectives'],['ひくい','hikui','low','Adjectives'],['ながい','nagai','long','Adjectives'],
+  ['みじかい','mijikai','short','Adjectives'],['はやい','hayai','fast; early','Adjectives'],['おそい','osoi','slow; late','Adjectives'],['おもしろい','omoshiroi','interesting','Adjectives'],['つまらない','tsumaranai','boring','Adjectives'],
+  ['たのしい','tanoshii','fun','Adjectives'],['うれしい','ureshii','happy; glad','Adjectives'],['かなしい','kanashii','sad','Adjectives'],['こわい','kowai','scary','Adjectives'],['やさしい','yasashii','kind; easy','Adjectives'],
+  ['むずかしい','muzukashii','difficult','Adjectives'],['かんたん','kantan','easy; simple','Adjectives'],['しずか','shizuka','quiet','Adjectives'],['にぎやか','nigiyaka','lively','Adjectives'],['きれい','kirei','beautiful; clean','Adjectives'],
+  ['ゆうめい','yūmei','famous','Adjectives'],['しんせつ','shinsetsu','kind; thoughtful','Adjectives'],['べんり','benri','convenient','Adjectives'],['ふべん','fuben','inconvenient','Adjectives'],['すき','suki','liked; fond of','Adjectives'],
+  ['きらい','kirai','disliked','Adjectives'],['じょうず','jōzu','skillful','Adjectives'],['へた','heta','unskilled','Adjectives'],['げんき','genki','well; energetic','Adjectives'],['ひま','hima','free; not busy','Adjectives'],
+  ['いそがしい','isogashii','busy','Adjectives'],['やわらかい','yawarakai','soft','Adjectives'],['まずい','mazui','bad-tasting','Adjectives'],['あまい','amai','sweet','Adjectives'],['からい','karai','spicy','Adjectives'],
+  ['にがい','nigai','bitter','Adjectives'],['すっぱい','suppai','sour','Adjectives'],['おもい','omoi','heavy','Adjectives'],['かるい','karui','lightweight','Adjectives'],['かわいい','kawaii','cute','Adjectives'],
+  ['たべる','taberu','to eat','Verbs'],['のむ','nomu','to drink','Verbs'],['みる','miru','to see; watch','Verbs'],['たずねる','tazuneru','to ask','Verbs'],['はなす','hanasu','to speak','Verbs'],
+  ['よむ','yomu','to read','Verbs'],['かく','kaku','to write','Verbs'],['する','suru','to do','Verbs'],['くる','kuru','to come','Verbs'],['いく','iku','to go','Verbs'],
+  ['かえる','kaeru','to return','Verbs'],['ある','aru','to exist (inanimate)','Verbs'],['いる','iru','to exist (animate)','Verbs'],['ねる','neru','to sleep','Verbs'],['おきる','okiru','to wake up','Verbs'],
+  ['はたらく','hataraku','to work','Verbs'],['やすむ','yasumu','to rest; take a break','Verbs'],['あそぶ','asobu','to play','Verbs'],['まなぶ','manabu','to learn','Verbs'],['おしえる','oshieru','to teach; tell','Verbs'],
+  ['おぼえる','oboeru','to remember','Verbs'],['わすれる','wasureru','to forget','Verbs'],['つかう','tsukau','to use','Verbs'],['つくる','tsukuru','to make','Verbs'],['かう','kau','to buy','Verbs'],
+  ['うる','uru','to sell','Verbs'],['まつ','matsu','to wait','Verbs'],['あう','au','to meet','Verbs'],['はいる','hairu','to enter','Verbs'],['でる','deru','to leave; go out','Verbs'],
+  ['あける','akeru','to open','Verbs'],['しめる','shimeru','to close','Verbs'],['あらう','arau','to wash','Verbs'],
+  ['れんしゅうする','renshū suru','to practice','Verbs'],['うたう','utau','to sing','Verbs'],['およぐ','oyogu','to swim','Verbs'],['はしる','hashiru','to run','Verbs'],['あるく','aruku','to walk','Verbs'],
+  ['のる','noru','to ride; get on','Verbs'],['おりる','oriru','to get off','Verbs'],['とる','toru','to take','Verbs'],['もつ','motsu','to hold; carry','Verbs'],['おく','oku','to put; place','Verbs'],
+  ['つける','tsukeru','to turn on','Verbs'],['けす','kesu','to turn off; erase','Verbs'],['おもう','omou','to think','Verbs'],['しる','shiru','to know','Verbs'],['すむ','sumu','to live; reside','Verbs'],
+  ['かりる','kariru','to borrow','Verbs'],['かす','kasu','to lend','Verbs'],
+].map(([jp,romaji,en,category]) => ({jp,romaji,en,category,script:'hira'}));
+vocabulary.push(...additionalVocabulary,...partsOfSpeechVocabulary);
 const soundHints = {a:'“ah”, as in father',i:'“ee”, as in see',u:'“oo”, with relaxed, unrounded lips',e:'“eh”, as in bed',o:'“oh”, as in open',shi:'“shee”, as in she',chi:'“chee”, as in cheese',tsu:'“ts” + “oo”, as in tsunami',fu:'A soft “foo”, with relaxed lips',wo:'Usually pronounced “o” as a particle',n:'A nasal “n” sound',r:'A light tap of the tongue'};
 const storageKey = 'nihongo-progress-v1';
 let saved = {};
@@ -292,7 +315,7 @@ function filteredWords() {
 }
 function renderVocabulary() {
   const words = filteredWords();
-  return `<p class="greeting">ことば / Words for your world</p><div class="page-head"><div><h1>Everyday discoveries.</h1><p>Familiar things. A whole new way to say them.</p></div>${scriptTabs()}</div><div class="filter-bar"><label class="search">${icon('search')}<input id="word-search" type="search" placeholder="Find a word…" aria-label="Search Japanese, romaji, or English" value="${escapeText(state.search)}"></label><div class="filters" role="group" aria-label="Vocabulary category">${['All','Everyday','Food','Places'].map(category => `<button class="filter ${state.category===category?'active':''}" data-action="category" data-value="${category}" aria-pressed="${state.category===category}">${category}</button>`).join('')}</div></div><div class="section-title"><h2>${scriptName()} words</h2><span class="muted" id="word-count" style="font-size:11px">${words.length} words</span></div><div class="vocab-grid" id="vocab-results">${words.length?words.map(wordCard).join(''):'<p class="empty-state">No words found. Try another word or category.</p>'}</div><p class="muted" style="font-size:11px;line-height:1.8;margin-top:22px">${state.script==='hira'?'Some words include small kana, such as ゃ in おちゃ (ocha). Everyday words are shown in hiragana here; you may also see them written in kanji.':'Some words include marks such as ゛ and ゜, small kana, or ー, which lengthens the previous vowel.'}</p>`;
+  return `<p class="greeting">ことば / Words for your world</p><div class="page-head"><div><h1>Everyday discoveries.</h1><p>Familiar things. A whole new way to say them.</p></div>${scriptTabs()}</div><div class="filter-bar"><label class="search">${icon('search')}<input id="word-search" type="search" placeholder="Find a word…" aria-label="Search Japanese, romaji, or English" value="${escapeText(state.search)}"></label><div class="filters" role="group" aria-label="Vocabulary category">${['All','Everyday','Food','Places','Adjectives','Verbs'].map(category => `<button class="filter ${state.category===category?'active':''}" data-action="category" data-value="${category}" aria-pressed="${state.category===category}">${category}</button>`).join('')}</div></div><div class="section-title"><h2>${scriptName()} words</h2><span class="muted" id="word-count" style="font-size:11px">${words.length} words</span></div><div class="vocab-grid" id="vocab-results">${words.length?words.map(wordCard).join(''):'<p class="empty-state">No words found. Try another word or category.</p>'}</div><p class="muted" style="font-size:11px;line-height:1.8;margin-top:22px">${state.script==='hira'?'Some words include small kana, such as ゃ in おちゃ (ocha). Everyday words are shown in hiragana here; you may also see them written in kanji.':'Some words include marks such as ゛ and ゜, small kana, or ー, which lengthens the previous vowel.'}</p>`;
 }
 function shuffle(items) {
   const result = [...items];
