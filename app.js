@@ -453,7 +453,18 @@ particleLessons.forEach(particle => {
   particle.examples = [firstExample,...additionalExamples];
 });
 function renderParticles() {
-  return `<p class="greeting">じょし / Small words, important work</p><div class="page-head"><div><h1>Particles connect the pieces.</h1><p>A particle follows a word or phrase and shows how it works in the sentence.</p></div></div><div class="particle-note"><strong>A helpful starting point</strong><p>Particles do not map neatly to one English word. Learn the job each one does in its sentence. A few are pronounced differently from their usual kana sound: は as a particle is wa, へ is e, and を is usually o.</p></div><div class="particle-grid">${particleLessons.map(particle => `<article class="particle-card"><div class="particle-card-head"><span class="particle-symbol" lang="ja">${particle.jp}</span><div><span class="particle-sound">${particle.sound}</span><h2>${particle.name}</h2></div></div><p class="particle-description">${particle.description}</p><div class="particle-examples">${particle.examples.map((example,index) => `<div class="particle-example"><span class="eyebrow">EXAMPLE ${index+1}</span><p class="particle-japanese" lang="ja">${example.jp}</p><p class="particle-romaji">${example.romaji}</p><p class="particle-meaning">${example.meaning}</p><div class="particle-vocabulary"><span>Vocabulary:</span>${example.words.map(term => { const word=vocabulary.find(item => item.jp===term); return word?`<span class="particle-word" lang="ja" title="${word.en}">${word.jp}<small>${word.en}</small></span>`:''; }).join('')}</div></div>`).join('')}</div></article>`).join('')}</div>`;
+  return `<p class="greeting">じょし / Small words, important work</p><div class="page-head"><div><h1>Particles connect the pieces.</h1><p>A particle follows a word or phrase and shows how it works in the sentence.</p></div></div><div class="particle-note"><strong>A helpful starting point</strong><p>Particles do not map neatly to one English word. Learn the job each one does in its sentence. A few are pronounced differently from their usual kana sound: は as a particle is wa, へ is e, and を is usually o.</p></div><div class="particle-grid">${particleLessons.map(particle => `<article class="particle-card"><div class="particle-card-head"><span class="particle-symbol" lang="ja">${particle.jp}</span><div><span class="particle-sound">${particle.sound}</span><h2>${particle.name}</h2></div></div><p class="particle-description">${particle.description}</p><button class="particle-open-examples" type="button" data-action="particle-examples" data-value="${particle.jp}" aria-label="View five example sentences for ${particle.jp}, ${particle.name}">View 5 examples ${icon('arrow')}</button></article>`).join('')}</div><dialog class="particle-dialog" id="particle-dialog" aria-labelledby="particle-dialog-title"><div class="particle-dialog-head"><div><span class="eyebrow">PARTICLE EXAMPLES</span><h2 id="particle-dialog-title"></h2></div><form method="dialog"><button class="particle-dialog-close" aria-label="Close examples">Close</button></form></div><div class="particle-dialog-content" id="particle-dialog-content"></div></dialog>`;
+}
+function renderParticleExample(example,index) {
+  return `<article class="particle-example"><span class="eyebrow">EXAMPLE ${index+1}</span><p class="particle-japanese" lang="ja">${example.jp}</p><p class="particle-romaji">${example.romaji}</p><p class="particle-meaning">${example.meaning}</p><div class="particle-vocabulary"><span>Vocabulary:</span>${example.words.map(term => { const word=vocabulary.find(item => item.jp===term); return word?`<span class="particle-word" lang="ja" title="${word.en}">${word.jp}<small>${word.en}</small></span>`:''; }).join('')}</div></article>`;
+}
+function openParticleExamples(particleCharacter) {
+  const particle=particleLessons.find(item => item.jp===particleCharacter);
+  const dialog=document.querySelector('#particle-dialog');
+  if (!particle || !dialog) return;
+  document.querySelector('#particle-dialog-title').textContent=`${particle.jp} · ${particle.name}`;
+  document.querySelector('#particle-dialog-content').innerHTML=particle.examples.map(renderParticleExample).join('');
+  dialog.showModal();
 }
 function shuffle(items) {
   const result = [...items];
@@ -501,11 +512,13 @@ function speak(text) {
   speechSynthesis.speak(utterance);
 }
 app.addEventListener('click', event => {
+  if (event.target.id==='particle-dialog') { event.target.close(); return; }
   const button = event.target.closest('[data-action]');
   if (!button) return;
   const action = button.dataset.action;
   if (action.startsWith('stroke-')) { strokePlayer?.handle(action,Number(button.dataset.index)); return; }
   if (action==='speak') { speak(button.dataset.text); return; }
+  if (action==='particle-examples') { openParticleExamples(button.dataset.value); return; }
   if (action==='home') { event.preventDefault(); state.view='lessons'; }
   if (action==='view') { state.view=button.dataset.value; window.scrollTo({top:0,behavior:'instant'}); }
   if (action==='script') { state.script=button.dataset.value; state.char=0; state.quiz=null; }
