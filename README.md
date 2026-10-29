@@ -7,7 +7,7 @@ A free, account-free introduction to Japanese. Open `index.html` in a modern bro
 - 46 basic hiragana and 46 basic katakana characters, in ten lessons each.
 - Character sounds, romanization, and short pronunciation notes.
 - Animated stroke order for all 92 kana, with play/pause, replay, and numbered writing steps. Reduced-motion preferences use static steps instead of animation.
-- 25 everyday words with Japanese, romaji, English meanings, search, and category filters.
+- 200 everyday words with Japanese, romaji, English meanings, search, and category filters.
 - Character-recognition quizzes with feedback and session results. Quizzes use explored characters when at least five are available; otherwise they use the selected lesson.
 - Progress and learning streaks saved on the current browser and device with localStorage. Clearing browser data removes progress. Private browsing may not retain it.
 
