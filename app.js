@@ -322,7 +322,31 @@ function filteredKanji() {
   return (window.kanjiData[state.kanjiGrade]||[]).filter(([character,meaning,on,kun]) => [character,meaning,on,kun].some(value => value.toLowerCase().includes(query)));
 }
 function kanjiCard([character,meaning,on,kun]) {
-  return `<article class="kanji-card"><div class="kanji-card-head"><span class="kanji-character" lang="ja">${character}</span><div><span class="eyebrow">GRADE ${state.kanjiGrade}</span><h2>${meaning}</h2></div></div><div class="kanji-readings">${on?`<p><span>On’yomi</span><strong lang="ja">${on}</strong></p>`:''}${kun?`<p><span>Kun’yomi</span><strong lang="ja">${kun}</strong></p>`:''}</div></article>`;
+  return `<article class="kanji-card"><div class="kanji-card-head"><span class="kanji-character" lang="ja">${character}</span><div><span class="eyebrow">GRADE ${state.kanjiGrade}</span><h2>${meaning}</h2></div></div><div class="kanji-readings">${on?`<p><span>On’yomi</span><strong lang="ja">${on}</strong></p>`:''}${kun?`<p><span>Kun’yomi</span><strong lang="ja">${kun}</strong></p>`:''}</div><button class="particle-open-examples kanji-card-examples" type="button" data-action="kanji-examples" data-value="${character}" aria-label="View five example sentences for ${character}, ${meaning}">View 5 examples ${icon('arrow')}</button></article>`;
+}
+function renderKanjiExample(example,index) {
+  return `<article class="particle-example"><span class="eyebrow">EXAMPLE ${index+1}</span><p class="particle-japanese" lang="ja">${example.jp}</p><button class="text-button particle-example-reveal" data-action="reveal-particle-example" aria-expanded="false">Reveal reading &amp; English translation</button><div class="particle-example-answer" data-example-answer role="status" tabindex="-1" hidden><p class="kanji-example-reading" lang="ja">${example.reading}</p><p class="particle-meaning">${example.meaning}</p></div></article>`;
+}
+function kanjiExamplesFor([character,meaning,on,kun]) {
+  const readingSource=kun||on||'';
+  const reading=readingSource.split('・')[0].replace(/[〜~]/g,'')||character;
+  const meaningLabel=meaning.split(';')[0].trim();
+  const vocabularyExamples=[
+    {word:'ねこ',reading:'ねこ',jp:`ねこは「${character}」を見ます。`,kana:`ねこは「${reading}」をみます。`,translation:`The cat looks at “${meaningLabel}.”`},
+    {word:'いぬ',reading:'いぬ',jp:`いぬは「${character}」を見ます。`,kana:`いぬは「${reading}」をみます。`,translation:`The dog looks at “${meaningLabel}.”`},
+    {word:'いえ',reading:'いえ',jp:`いえで「${character}」を書きます。`,kana:`いえで「${reading}」をかきます。`,translation:`I write “${meaningLabel}” at home.`},
+    {word:'はな',reading:'はな',jp:`はなを見て、「${character}」を書きます。`,kana:`はなをみて、「${reading}」をかきます。`,translation:`I look at a flower, then write “${meaningLabel}.”`},
+    {word:'すし',reading:'すし',jp:`すしを食べて、「${character}」を書きます。`,kana:`すしをたべて、「${reading}」をかきます。`,translation:`I eat sushi, then write “${meaningLabel}.”`},
+  ];
+  return vocabularyExamples.filter(example=>vocabulary.some(word=>word.jp===example.word)).map(({jp,kana,translation})=>({jp,reading:kana,meaning:translation}));
+}
+function openKanjiExamples(character) {
+  const kanji=(window.kanjiData[state.kanjiGrade]||[]).find(item=>item[0]===character);
+  const dialog=document.querySelector('#kanji-example-dialog');
+  if (!dialog || !kanji) return;
+  document.querySelector('#kanji-example-dialog-title').textContent=`${kanji[0]} · ${kanji[1]} — Grade ${state.kanjiGrade}`;
+  document.querySelector('#kanji-example-dialog-content').innerHTML=kanjiExamplesFor(kanji).map(renderKanjiExample).join('');
+  dialog.showModal();
 }
 function renderKanjiResults() {
   const kanji=filteredKanji();
@@ -331,7 +355,7 @@ function renderKanjiResults() {
 }
 function renderKanji() {
   const kanji=filteredKanji();
-  return `<p class="greeting">かんじ / Characters and meanings</p><div class="page-head"><div><h1>Build your kanji foundation.</h1><p>Start with the first two Japanese school grades.</p></div></div><div class="kanji-intro"><strong>Reading guide</strong><p>On’yomi readings are shown in katakana; kun’yomi readings are shown in hiragana. These are common readings, not every possible reading for each kanji.</p></div><div class="kanji-controls"><div class="kanji-grade-tabs" role="group" aria-label="Kanji grade">${[1,2].map(grade => `<button class="kanji-grade-tab ${state.kanjiGrade===grade?'active':''}" data-action="kanji-grade" data-value="${grade}" aria-pressed="${state.kanjiGrade===grade}">Grade ${grade}</button>`).join('')}</div><label class="search kanji-search">${icon('search')}<input id="kanji-search" type="search" placeholder="Find kanji, meaning, or kana reading" aria-label="Search kanji, meaning, or kana reading" value="${escapeText(state.kanjiSearch)}"></label></div><div class="section-title"><h2>Grade ${state.kanjiGrade} kanji</h2><span class="muted" id="kanji-count" style="font-size:11px">${kanji.length} kanji</span></div><div class="kanji-grid" id="kanji-results">${kanji.length?kanji.map(kanjiCard).join(''):'<p class="empty-state">No kanji found. Try another character, meaning, or kana reading.</p>'}</div>`;
+  return `<p class="greeting">かんじ / Characters and meanings</p><div class="page-head"><div><h1>Build your kanji foundation.</h1><p>Start with the first two Japanese school grades.</p></div></div><div class="kanji-intro"><strong>Reading guide</strong><p>On’yomi readings are shown in katakana; kun’yomi readings are shown in hiragana. These are common readings, not every possible reading for each kanji. Each character has five sample sentences using familiar vocabulary; open its examples to reveal kana readings and translations.</p></div><div class="kanji-controls"><div class="kanji-grade-tabs" role="group" aria-label="Kanji grade">${[1,2].map(grade => `<button class="kanji-grade-tab ${state.kanjiGrade===grade?'active':''}" data-action="kanji-grade" data-value="${grade}" aria-pressed="${state.kanjiGrade===grade}">Grade ${grade}</button>`).join('')}</div><label class="search kanji-search">${icon('search')}<input id="kanji-search" type="search" placeholder="Find kanji, meaning, or kana reading" aria-label="Search kanji, meaning, or kana reading" value="${escapeText(state.kanjiSearch)}"></label></div><div class="section-title"><h2>Grade ${state.kanjiGrade} kanji</h2><span class="muted" id="kanji-count" style="font-size:11px">${kanji.length} kanji</span></div><div class="kanji-grid" id="kanji-results">${kanji.length?kanji.map(kanjiCard).join(''):'<p class="empty-state">No kanji found. Try another character, meaning, or kana reading.</p>'}</div><dialog class="particle-dialog" id="kanji-example-dialog" aria-labelledby="kanji-example-dialog-title"><div class="particle-dialog-head"><div><span class="eyebrow">KANJI EXAMPLES</span><h2 id="kanji-example-dialog-title"></h2></div><form method="dialog"><button class="particle-dialog-close" aria-label="Close examples">Close</button></form></div><div class="particle-dialog-content" id="kanji-example-dialog-content"></div></dialog>`;
 }
 const particleLessons = [
   {jp:'は',sound:'wa',name:'Topic',description:'Marks the topic: what the sentence is about. When used as a particle, は is pronounced wa. It can also set up a contrast.',example:'ねこはかわいいです。',romaji:'Neko wa kawaii desu.',meaning:'Cats are cute.',words:['ねこ','かわいい']},
@@ -551,6 +575,7 @@ app.addEventListener('click', event => {
   if (action.startsWith('stroke-')) { strokePlayer?.handle(action,Number(button.dataset.index)); return; }
   if (action==='speak') { speak(button.dataset.text); return; }
   if (action==='particle-examples') { openParticleExamples(button.dataset.value); return; }
+  if (action==='kanji-examples') { openKanjiExamples(button.dataset.value); return; }
   if (action==='reveal-particle-example') {
     const answer=button.closest('.particle-example')?.querySelector('[data-example-answer]');
     if (!answer) return;
