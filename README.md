@@ -8,6 +8,7 @@ A free, account-free introduction to Japanese. Open `index.html` in a modern bro
 - Character sounds, romanization, and short pronunciation notes.
 - Animated stroke order for all 92 kana, with play/pause, replay, and numbered writing steps. Reduced-motion preferences use static steps instead of animation.
 - 300 Japanese vocabulary entries across hiragana and katakana, with romaji, English meanings, search, and category filters. Includes 50 adjectives and 50 verbs in hiragana.
+- Particle guide covering common particles, their roles, and example sentences built from vocabulary entries.
 - Character-recognition quizzes with feedback and session results. Quizzes use explored characters when at least five are available; otherwise they use the selected lesson.
 - Progress and learning streaks saved on the current browser and device with localStorage. Clearing browser data removes progress. Private browsing may not retain it.
 
