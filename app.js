@@ -1,0 +1,211 @@
+const icons = {
+  book:'book-open', grid:'layout-grid', practice:'pencil-line', chart:'chart-no-axes-column-increasing',
+  sound:'volume-2', arrow:'arrow-right', chevron:'chevron-right', flame:'flame', user:'user-round',
+  leaf:'leaf', target:'target', bulb:'lightbulb', check:'check', shield:'shield-check', search:'search', trophy:'trophy',
+};
+const icon = name => `<i data-lucide="${icons[name] || icons.book}" aria-hidden="true"></i>`;
+const rows = [
+  {name:'Vowels', hira:'あいうえお', kata:'アイウエオ', sounds:['a','i','u','e','o']},
+  {name:'K-row', hira:'かきくけこ', kata:'カキクケコ', sounds:['ka','ki','ku','ke','ko']},
+  {name:'S-row', hira:'さしすせそ', kata:'サシスセソ', sounds:['sa','shi','su','se','so']},
+  {name:'T-row', hira:'たちつてと', kata:'タチツテト', sounds:['ta','chi','tsu','te','to']},
+  {name:'N-row', hira:'なにぬねの', kata:'ナニヌネノ', sounds:['na','ni','nu','ne','no']},
+  {name:'H-row', hira:'はひふへほ', kata:'ハヒフヘホ', sounds:['ha','hi','fu','he','ho']},
+  {name:'M-row', hira:'まみむめも', kata:'マミムメモ', sounds:['ma','mi','mu','me','mo']},
+  {name:'Y-row', hira:'やゆよ', kata:'ヤユヨ', sounds:['ya','yu','yo']},
+  {name:'R-row', hira:'らりるれろ', kata:'ラリルレロ', sounds:['ra','ri','ru','re','ro']},
+  {name:'W + N', hira:'わをん', kata:'ワヲン', sounds:['wa','wo','n']},
+];
+const vocabulary = [
+  {jp:'あさ',romaji:'asa',en:'Morning',category:'Everyday',script:'hira'},
+  {jp:'いえ',romaji:'ie',en:'Home',category:'Places',script:'hira'},
+  {jp:'おいしい',romaji:'oishii',en:'Delicious',category:'Food',script:'hira'},
+  {jp:'えき',romaji:'eki',en:'Train station',category:'Places',script:'hira'},
+  {jp:'すし',romaji:'sushi',en:'Sushi',category:'Food',script:'hira'},
+  {jp:'ねこ',romaji:'neko',en:'Cat',category:'Everyday',script:'hira'},
+  {jp:'みせ',romaji:'mise',en:'Shop',category:'Places',script:'hira'},
+  {jp:'かさ',romaji:'kasa',en:'Umbrella',category:'Everyday',script:'hira'},
+  {jp:'おちゃ',romaji:'ocha',en:'Tea',category:'Food',script:'hira'},
+  {jp:'はな',romaji:'hana',en:'Flower',category:'Everyday',script:'hira'},
+  {jp:'そら',romaji:'sora',en:'Sky',category:'Everyday',script:'hira'},
+  {jp:'やま',romaji:'yama',en:'Mountain',category:'Places',script:'hira'},
+  {jp:'いぬ',romaji:'inu',en:'Dog',category:'Everyday',script:'hira'},
+  {jp:'さかな',romaji:'sakana',en:'Fish',category:'Food',script:'hira'},
+  {jp:'くるま',romaji:'kuruma',en:'Car',category:'Everyday',script:'hira'},
+  {jp:'うみ',romaji:'umi',en:'Sea',category:'Places',script:'hira'},
+  {jp:'コーヒー',romaji:'kōhī',en:'Coffee',category:'Food',script:'kata'},
+  {jp:'パン',romaji:'pan',en:'Bread',category:'Food',script:'kata'},
+  {jp:'コンビニ',romaji:'konbini',en:'Convenience store',category:'Places',script:'kata'},
+  {jp:'ホテル',romaji:'hoteru',en:'Hotel',category:'Places',script:'kata'},
+  {jp:'バス',romaji:'basu',en:'Bus',category:'Everyday',script:'kata'},
+  {jp:'カメラ',romaji:'kamera',en:'Camera',category:'Everyday',script:'kata'},
+  {jp:'アイス',romaji:'aisu',en:'Ice cream',category:'Food',script:'kata'},
+  {jp:'トイレ',romaji:'toire',en:'Restroom',category:'Places',script:'kata'},
+  {jp:'メニュー',romaji:'menyū',en:'Menu',category:'Food',script:'kata'},
+];
+const soundHints = {a:'“ah”, as in father',i:'“ee”, as in see',u:'“oo”, with relaxed, unrounded lips',e:'“eh”, as in bed',o:'“oh”, as in open',shi:'“shee”, as in she',chi:'“chee”, as in cheese',tsu:'“ts” + “oo”, as in tsunami',fu:'A soft “foo”, with relaxed lips',wo:'Usually pronounced “o” as a particle',n:'A nasal “n” sound',r:'A light tap of the tongue'};
+const storageKey = 'nihongo-progress-v1';
+let saved = {};
+try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch { saved = {}; }
+const learned = new Set(Array.isArray(saved.learned) ? saved.learned.filter(value => typeof value === 'string') : []);
+const activity = new Set(Array.isArray(saved.activity) ? saved.activity.filter(value => typeof value === 'string') : []);
+const state = {view:'lessons',script:'hira',row:0,char:0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0};
+const app = document.querySelector('#app');
+let strokePlayer = null;
+const scriptName = () => state.script === 'hira' ? 'Hiragana' : 'Katakana';
+const localDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+function saveProgress() {
+  try { localStorage.setItem(storageKey, JSON.stringify({learned:[...learned],activity:[...activity],quizzes:state.quizzes})); }
+  catch { toast('Browser storage is unavailable. Progress will last for this visit.'); }
+}
+function streak() {
+  const date = new Date();
+  if (!activity.has(localDate(date))) date.setDate(date.getDate()-1);
+  let count = 0;
+  while (activity.has(localDate(date))) { count++; date.setDate(date.getDate()-1); }
+  return count;
+}
+const characters = () => rows.flatMap((row,rowIndex) => [...row[state.script]].map((character,index) => ({character,sound:row.sounds[index],row:rowIndex,index})));
+const countLearned = () => characters().filter(item => learned.has(item.character)).length;
+const escapeText = text => String(text).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+function scriptTabs() {
+  return `<div class="script-tabs" role="group" aria-label="Japanese script">${['hira','kata'].map(script => `<button class="script-tab ${state.script===script?'active':''}" data-action="script" data-value="${script}" aria-pressed="${state.script===script}">${script==='hira'?'Hiragana':'Katakana'}</button>`).join('')}</div>`;
+}
+function render() {
+  strokePlayer?.destroy();
+  const titles = {lessons:scriptName(),vocabulary:'Vocabulary',practice:'Practice',progress:'Your progress'};
+  app.innerHTML = `<aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" href="#" data-action="home" aria-label="GaiGenius home"><span class="brand-mark" lang="ja">が</span><span>Gai<span class="accent">Genius</span></span></a>
+    <p class="brand-caption">A LITTLE JAPANESE, EVERY DAY.</p>
+    <p class="nav-label">YOUR LEARNING SPACE</p>
+    <nav class="nav">${[['lessons','book','Lessons'],['vocabulary','grid','Vocabulary'],['practice','practice','Practice'],['progress','chart','My progress']].map(([view,symbol,label]) => `<button class="nav-button ${state.view===view?'active':''}" data-action="view" data-value="${view}" ${state.view===view?'aria-current="page"':''}>${icon(symbol)}<span>${label}</span>${view==='lessons'?'<span class="nav-dot">あ</span>':''}</button>`).join('')}</nav>
+    <div class="sidebar-note"><div class="jp" lang="ja">一歩ずつ。</div><p>One step at a time.<br>That's how every journey begins.</p></div>
+    <div class="sidebar-foot">${icon('shield')} Free to learn. Always.</div>
+    </aside><div class="shell"><header class="topbar"><div class="breadcrumb">Your learning space ${icon('chevron')} <strong>${titles[state.view]}</strong></div><a class="brand mobile-brand" href="#" data-action="home" aria-label="GaiGenius home"><span class="brand-mark" lang="ja">が</span><span>Gai<span class="accent">Genius</span></span></a><div class="topbar-right"><span class="streak" title="Consecutive days of learning">${icon('flame')} ${streak()} day${streak()===1?'':'s'}</span><span class="guest" title="Learning without an account" aria-label="Guest learner">${icon('user')}</span></div></header>
+    <main class="main" id="main-content"><div class="fade-in">${state.view==='lessons'?renderLessons():state.view==='vocabulary'?renderVocabulary():state.view==='practice'?renderPractice():renderProgress()}</div><footer class="footer"><span>A little progress, every day. You're on your way.</span><span class="jp" lang="ja">楽しんで学ぼう <span lang="en">/ Enjoy the journey</span></span></footer></main></div>`;
+  lucide.createIcons({attrs:{'stroke-width':1.7}});
+  strokePlayer = mountStrokeGuide();
+}
+function renderLessons() {
+  const row = rows[state.row];
+  const character = row[state.script][state.char];
+  const sound = row.sounds[state.char];
+  const count = countLearned();
+  const preview = vocabulary.filter(word => word.script===state.script).slice(0,3);
+  return `<p class="greeting">こんにちは <span lang="en">/ Hello, learner</span></p><div class="page-head"><div><h1>Let's start with ${state.script==='hira'?'あ':'ア'}.</h1><p>A new alphabet. A little practice. A world of possibility.</p></div><span class="today-tag">${icon('leaf')} At your own pace</span></div>
+    <div class="workspace"><div class="lesson-column"><div class="section-title"><h2>Your next small step</h2>${scriptTabs()}</div>
+    <section class="lesson-card" aria-label="Character lesson"><div class="lesson-top"><div><span class="eyebrow">${scriptName().toUpperCase()} · LESSON ${String(state.row+1).padStart(2,'0')}</span><h3>${state.row===0?'Meet the vowels':`Meet the ${row.name.toLowerCase()}`}</h3></div><span class="lesson-badge">${state.row===0?'The foundation':`${row[state.script].length} characters`}</span></div>
+    <div class="character-stage"><div class="character-grid" aria-hidden="true"></div><button class="sound-button" data-action="speak" data-text="${character}" title="Listen to ${sound}" aria-label="Listen to ${sound}">${icon('sound')}</button><div class="big-character writing-character" lang="ja">${renderStrokeDiagram(character)}</div><div class="romanization">${sound}</div><div class="sound-description">${soundHints[sound] || (sound.startsWith('r') ? soundHints.r : `Pronounced “${sound}”`)}</div></div>
+    ${renderStrokeControls(character)}
+    <div class="character-options" role="group" aria-label="Lesson characters">${[...row[state.script]].map((kana,index) => `<button class="char-option ${state.char===index?'active':''} ${learned.has(kana)?'learned':''}" data-action="character" data-index="${index}" aria-pressed="${state.char===index}" aria-label="${kana}, ${row.sounds[index]}${learned.has(kana)?', learned':''}" lang="ja">${kana}</button>`).join('')}</div>
+    <div class="lesson-bottom"><span class="lesson-position">${String(state.char+1).padStart(2,'0')} <span aria-hidden="true">/</span> ${String(row.sounds.length).padStart(2,'0')} characters</span><button class="primary-button" data-action="learn">${state.char===row.sounds.length-1?'Finish lesson':'Got it, next'} ${icon(state.char===row.sounds.length-1?'check':'arrow')}</button></div></section>
+    <section class="section-gap"><div class="section-title"><h2>The ${scriptName().toLowerCase()} path</h2><span class="muted" style="font-size:10px">10 bite-sized lessons</span></div><div class="row-list">${rows.map((item,index) => `<button class="row-button ${state.row===index?'active':''}" data-action="row" data-index="${index}" aria-pressed="${state.row===index}"><span class="jp" lang="ja">${item[state.script][0]}</span><span class="row-name ${[...item[state.script]].every(kana => learned.has(kana))?'row-complete':''}">${[...item[state.script]].every(kana => learned.has(kana))?'✓ ':''}${item.name}</span></button>`).join('')}</div></section></div>
+    <aside class="right-column" aria-label="Learning insights"><section class="progress-panel"><div class="progress-head"><h2>Look at you grow</h2>${icon('leaf')}</div><div class="progress-count">${count} <span>/ 46 characters</span></div><div class="progress-track" role="progressbar" aria-label="${scriptName()} characters learned" aria-valuenow="${count}" aria-valuemin="0" aria-valuemax="46"><div class="progress-fill" style="width:${count/46*100}%"></div></div><div class="progress-caption"><span>${scriptName()} journey</span><span>${Math.round(count/46*100)}%</span></div><div class="daily-goal"><span class="goal-icon">${icon('target')}</span><div class="goal-copy">A small daily goal<p>One lesson is a lovely start.</p></div><span class="goal-count">${activity.has(localDate())?'1':'0'} / 1</span></div></section>
+    <article class="culture-card"><div class="culture-photo"><img src="https://images.unsplash.com/photo-1554797589-7241bb691973?auto=format&fit=crop&w=650&q=85" alt="Japanese shop signs along a lantern-lit Tokyo street" loading="lazy"><span class="photo-label" lang="ja">まちの中で</span></div><div class="culture-body"><span class="eyebrow">JAPANESE IN THE WILD</span><h3>Around the next corner</h3><p>${state.script==='hira'?'From a little shop to your morning tea, hiragana is all around you.':'Coffee shops, hotels, and menus: katakana brings familiar words to life.'}</p><button class="text-button" data-action="view" data-value="vocabulary">Explore everyday words ${icon('arrow')}</button></div></article>
+    <div class="tip">${icon('bulb')}<p><strong>A little learning note</strong>${state.script==='hira'?'Hiragana is phonetic: each character represents a sound. Five vowels are the beginning of it all.':'Katakana shares the same sounds as hiragana. It is often used for words borrowed from other languages.'}</p></div></aside></div>
+    <section class="vocab-section"><div class="section-title"><div class="vocab-heading"><h2>Little words, everyday life</h2><span class="count-badge">${vocabulary.filter(word => word.script===state.script).length} words</span></div><button class="text-button" data-action="view" data-value="vocabulary">View all ${icon('arrow')}</button></div><div class="vocab-grid preview">${preview.map(wordCard).join('')}</div></section>`;
+}
+function wordCard(word) {
+  return `<article class="word-card"><div class="word-category"><span class="category-dot"></span>${word.category}</div><button class="word-sound" data-action="speak" data-text="${word.jp}" title="Listen to ${word.romaji}" aria-label="Listen to ${word.romaji}">${icon('sound')}</button><div class="word-jp" lang="ja">${word.jp}</div><p class="word-romaji">${word.romaji}</p><div class="word-english">${word.en}</div></article>`;
+}
+function filteredWords() {
+  const query = state.search.trim().toLowerCase();
+  return vocabulary.filter(word => word.script===state.script && (state.category==='All'||word.category===state.category) && [word.jp,word.en,word.romaji].some(text => text.toLowerCase().includes(query)));
+}
+function renderVocabulary() {
+  const words = filteredWords();
+  return `<p class="greeting">ことば / Words for your world</p><div class="page-head"><div><h1>Everyday discoveries.</h1><p>Familiar things. A whole new way to say them.</p></div>${scriptTabs()}</div><div class="filter-bar"><label class="search">${icon('search')}<input id="word-search" type="search" placeholder="Find a word…" aria-label="Search Japanese, romaji, or English" value="${escapeText(state.search)}"></label><div class="filters" role="group" aria-label="Vocabulary category">${['All','Everyday','Food','Places'].map(category => `<button class="filter ${state.category===category?'active':''}" data-action="category" data-value="${category}" aria-pressed="${state.category===category}">${category}</button>`).join('')}</div></div><div class="section-title"><h2>${scriptName()} words</h2><span class="muted" id="word-count" style="font-size:11px">${words.length} words</span></div><div class="vocab-grid" id="vocab-results">${words.length?words.map(wordCard).join(''):'<p class="empty-state">No words found. Try another word or category.</p>'}</div><p class="muted" style="font-size:11px;line-height:1.8;margin-top:22px">${state.script==='hira'?'Some words include small kana, such as ゃ in おちゃ (ocha). Everyday words are shown in hiragana here; you may also see them written in kanji.':'Some words include marks such as ゛ and ゜, small kana, or ー, which lengthens the previous vowel.'}</p>`;
+}
+function shuffle(items) {
+  const result = [...items];
+  for (let index=result.length-1;index>0;index--) { const other=Math.floor(Math.random()*(index+1)); [result[index],result[other]]=[result[other],result[index]]; }
+  return result;
+}
+function startQuiz() {
+  const pool = characters();
+  const known = pool.filter(item => learned.has(item.character));
+  const eligible = known.length>=5 ? known : pool.filter(item => item.row===state.row);
+  const questions = shuffle(eligible).slice(0,10).map(item => ({...item,options:shuffle([item.sound,...shuffle(pool.filter(other => other.sound!==item.sound)).slice(0,3).map(other => other.sound)])}));
+  state.quiz = {questions,index:0,score:0,answer:null};
+}
+function renderPractice() {
+  if (!state.quiz) startQuiz();
+  const quiz = state.quiz;
+  const complete = quiz.index>=quiz.questions.length;
+  const question = quiz.questions[quiz.index];
+  return `<p class="greeting">れんしゅう / A little practice</p><div class="page-head"><div><h1>Make it second nature.</h1><p>One sound at a time. Mistakes are part of the journey.</p></div></div><div class="practice-layout"><div class="practice-options"><p>${complete?'Session complete':`${scriptName()} · ${quiz.questions.length} questions`}</p>${scriptTabs()}</div><section class="practice-card" aria-label="Character recognition quiz">${complete?`
+    <div class="completion-icon">${icon('trophy')}</div><h2 class="result-title">${quiz.score===quiz.questions.length?'Beautifully done!':'Another step forward.'}</h2><p class="result-description">${quiz.score===quiz.questions.length?'Every sound found its place.':'Keep coming back. Familiarity grows with practice.'}</p><div class="result-score">${quiz.score}<span class="muted"> / ${quiz.questions.length}</span></div><p class="muted">correct answers</p><div class="result-actions"><button class="secondary-button" data-action="view" data-value="lessons">Back to lessons</button><button class="primary-button" data-action="restart">Practice again ${icon('arrow')}</button></div>`:`
+    <div class="quiz-meta"><span>QUESTION ${quiz.index+1} OF ${quiz.questions.length}</span><span>${quiz.score} correct</span></div><div class="progress-track"><div class="progress-fill" style="width:${quiz.index/quiz.questions.length*100}%"></div></div><div class="quiz-character" lang="ja">${question.character}</div><p class="quiz-prompt">Which sound matches this character?</p><div class="answer-grid">${question.options.map(option => `<button class="answer-button ${quiz.answer!==null?(option===question.sound?'correct':option===quiz.answer?'wrong':''):''}" data-action="answer" data-value="${option}" ${quiz.answer!==null?'disabled':''}>${option}</button>`).join('')}</div><div class="quiz-feedback" role="status">${quiz.answer===null?'':quiz.answer===question.sound?'That’s right. Nicely done!':`This is “${question.sound}”. You’ll get it next time.`}</div>${quiz.answer!==null?`<button class="primary-button quiz-action" data-action="next-question">${quiz.index===quiz.questions.length-1?'See results':'Next character'} ${icon('arrow')}</button>`:''}`}</section></div>`;
+}
+function renderProgress() {
+  return `<div class="progress-view"><p class="greeting">一歩ずつ / One step at a time</p><div class="page-head"><div><h1>Your journey, so far.</h1><p>Every character is a small win worth keeping.</p></div></div><div class="progress-stats"><article class="stat">${icon('book')}<strong>${charactersForAllScripts().filter(character => learned.has(character)).length}<span class="muted" style="font-size:15px"> / 92</span></strong><p>Characters explored</p></article><article class="stat">${icon('flame')}<strong>${streak()}</strong><p>Day learning streak</p></article><article class="stat">${icon('target')}<strong>${state.quizzes}</strong><p>Practice sessions</p></article></div><div class="section-title"><h2>Your character collection</h2>${scriptTabs()}</div><div class="kana-chart">${characters().map(item => `<button class="chart-cell ${learned.has(item.character)?'learned':''}" data-action="open-character" data-row="${item.row}" data-index="${item.index}" aria-label="Study ${item.character}, ${item.sound}${learned.has(item.character)?', learned':''}"><span class="jp" lang="ja">${item.character}</span><small>${item.sound}</small></button>`).join('')}</div><p class="muted" style="font-size:11px">${countLearned()} of 46 ${scriptName().toLowerCase()} characters explored.</p></div>`;
+}
+function charactersForAllScripts() { return rows.flatMap(row => [...row.hira,...row.kata]); }
+let toastTimer;
+function toast(message) {
+  document.querySelector('.toast')?.remove();
+  const element = document.createElement('div');
+  element.className='toast'; element.setAttribute('role','status'); element.textContent=message;
+  document.body.append(element); clearTimeout(toastTimer);
+  toastTimer=setTimeout(() => element.remove(),4500);
+}
+function speak(text) {
+  if (!('speechSynthesis' in window)) { toast('Audio is not supported by this browser. Romaji is shown below each character.'); return; }
+  const voices = speechSynthesis.getVoices();
+  const voice = voices.find(item => item.lang.toLowerCase().startsWith('ja'));
+  if (voices.length && !voice) { toast('Japanese audio needs a Japanese voice installed in your browser or device.'); return; }
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang='ja-JP'; utterance.rate=0.75;
+  if (voice) utterance.voice=voice;
+  utterance.onerror=event => { if (!['canceled','interrupted'].includes(event.error)) toast('Japanese audio is unavailable. Check your device’s Japanese voice settings.'); };
+  speechSynthesis.speak(utterance);
+}
+app.addEventListener('click', event => {
+  const button = event.target.closest('[data-action]');
+  if (!button) return;
+  const action = button.dataset.action;
+  if (action.startsWith('stroke-')) { strokePlayer?.handle(action,Number(button.dataset.index)); return; }
+  if (action==='speak') { speak(button.dataset.text); return; }
+  if (action==='home') { event.preventDefault(); state.view='lessons'; }
+  if (action==='view') { state.view=button.dataset.value; window.scrollTo({top:0,behavior:'instant'}); }
+  if (action==='script') { state.script=button.dataset.value; state.char=0; state.quiz=null; }
+  if (action==='row') { state.row=Number(button.dataset.index); state.char=0; }
+  if (action==='character') state.char=Number(button.dataset.index);
+  if (action==='category') state.category=button.dataset.value;
+  if (action==='learn') {
+    const row=rows[state.row];
+    learned.add(row[state.script][state.char]); activity.add(localDate()); saveProgress();
+    if (state.char<row.sounds.length-1) state.char++;
+    else {
+      const completedRow=state.row;
+      if (state.row<rows.length-1) { state.row++; state.char=0; }
+      else { state.view='progress'; }
+      toast(`${rows[completedRow].name} lesson complete. A lovely step forward!`);
+    }
+  }
+  if (action==='open-character') { state.view='lessons'; state.row=Number(button.dataset.row); state.char=Number(button.dataset.index); window.scrollTo({top:0,behavior:'instant'}); }
+  if (action==='restart') startQuiz();
+  if (action==='answer') {
+    if (!state.quiz || state.quiz.answer!==null) return;
+    state.quiz.answer=button.dataset.value;
+    if (state.quiz.answer===state.quiz.questions[state.quiz.index].sound) state.quiz.score++;
+  }
+  if (action==='next-question') {
+    if (!state.quiz || state.quiz.answer===null) return;
+    state.quiz.index++; state.quiz.answer=null;
+    if (state.quiz.index===state.quiz.questions.length) { state.quizzes++; activity.add(localDate()); saveProgress(); }
+  }
+  render();
+  if (action==='answer') document.querySelector('[data-action="next-question"]')?.focus({preventScroll:true});
+  if (action==='next-question') document.querySelector('.answer-button')?.focus({preventScroll:true});
+});
+app.addEventListener('input', event => {
+  if (event.target.id!=='word-search') return;
+  state.search=event.target.value;
+  const words=filteredWords();
+  document.querySelector('#vocab-results').innerHTML=words.length?words.map(wordCard).join(''):'<p class="empty-state">No words found. Try another word or category.</p>';
+  document.querySelector('#word-count').textContent=`${words.length} words`;
+  lucide.createIcons({attrs:{'stroke-width':1.7}});
+});
+render();
