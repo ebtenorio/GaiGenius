@@ -250,7 +250,7 @@ let saved = {};
 try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch { saved = {}; }
 const learned = new Set(Array.isArray(saved.learned) ? saved.learned.filter(value => typeof value === 'string') : []);
 const activity = new Set(Array.isArray(saved.activity) ? saved.activity.filter(value => typeof value === 'string') : []);
-const state = {view:'lessons',script:'hira',row:0,char:0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:'characters',sentenceQueue:[],sentenceIndex:0,translationRevealed:false};
+const state = {view:'lessons',script:'hira',row:0,char:0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:'characters',sentenceQueue:[],sentenceIndex:0,translationRevealed:false,kanjiGrade:1,kanjiSearch:''};
 const app = document.querySelector('#app');
 let strokePlayer = null;
 const scriptName = () => state.script === 'hira' ? 'Hiragana' : 'Katakana';
@@ -274,16 +274,16 @@ function scriptTabs() {
 }
 function render() {
   strokePlayer?.destroy();
-  const titles = {lessons:scriptName(),vocabulary:'Vocabulary',particles:'Particles',practice:'Practice',progress:'Your progress'};
+  const titles = {lessons:scriptName(),vocabulary:'Vocabulary',particles:'Particles',kanji:'Kanji',practice:'Practice',progress:'Your progress'};
   app.innerHTML = `<aside class="sidebar" aria-label="Main navigation">
     <a class="brand" href="#" data-action="home" aria-label="GaiGenius home"><span class="brand-mark" lang="ja">が</span><span>Gai<span class="accent">Genius</span></span></a>
     <p class="brand-caption">A LITTLE JAPANESE, EVERY DAY.</p>
     <p class="nav-label">YOUR LEARNING SPACE</p>
-    <nav class="nav">${[['lessons','book','Lessons'],['vocabulary','grid','Vocabulary'],['particles','bulb','Particles'],['practice','practice','Practice'],['progress','chart','My progress']].map(([view,symbol,label]) => `<button class="nav-button ${state.view===view?'active':''}" data-action="view" data-value="${view}" ${state.view===view?'aria-current="page"':''}>${icon(symbol)}<span>${label}</span>${view==='lessons'?'<span class="nav-dot">あ</span>':''}</button>`).join('')}</nav>
+    <nav class="nav">${[['lessons','book','Lessons'],['vocabulary','grid','Vocabulary'],['particles','bulb','Particles'],['kanji','grid','Kanji'],['practice','practice','Practice'],['progress','chart','My progress']].map(([view,symbol,label]) => `<button class="nav-button ${state.view===view?'active':''}" data-action="view" data-value="${view}" ${state.view===view?'aria-current="page"':''}>${icon(symbol)}<span>${label}</span>${view==='lessons'?'<span class="nav-dot">あ</span>':''}</button>`).join('')}</nav>
     <div class="sidebar-note"><div class="jp" lang="ja">一歩ずつ。</div><p>One step at a time.<br>That's how every journey begins.</p></div>
     <div class="sidebar-foot">${icon('shield')} Free to learn. Always.</div>
     </aside><div class="shell"><header class="topbar"><div class="breadcrumb">Your learning space ${icon('chevron')} <strong>${titles[state.view]}</strong></div><a class="brand mobile-brand" href="#" data-action="home" aria-label="GaiGenius home"><span class="brand-mark" lang="ja">が</span><span>Gai<span class="accent">Genius</span></span></a><div class="topbar-right"><span class="streak" title="Consecutive days of learning">${icon('flame')} ${streak()} day${streak()===1?'':'s'}</span><span class="guest" title="Learning without an account" aria-label="Guest learner">${icon('user')}</span></div></header>
-    <main class="main" id="main-content"><div class="fade-in">${state.view==='lessons'?renderLessons():state.view==='vocabulary'?renderVocabulary():state.view==='particles'?renderParticles():state.view==='practice'?renderPractice():renderProgress()}</div><footer class="footer"><span>A little progress, every day. You're on your way.</span><span class="jp" lang="ja">楽しんで学ぼう <span lang="en">/ Enjoy the journey</span></span></footer></main></div>`;
+    <main class="main" id="main-content"><div class="fade-in">${state.view==='lessons'?renderLessons():state.view==='vocabulary'?renderVocabulary():state.view==='particles'?renderParticles():state.view==='kanji'?renderKanji():state.view==='practice'?renderPractice():renderProgress()}</div><footer class="footer"><span>A little progress, every day. You're on your way.</span><span class="jp" lang="ja">楽しんで学ぼう <span lang="en">/ Enjoy the journey</span></span></footer></main></div>`;
   lucide.createIcons({attrs:{'stroke-width':1.7}});
   strokePlayer = mountStrokeGuide();
 }
@@ -316,6 +316,22 @@ function filteredWords() {
 function renderVocabulary() {
   const words = filteredWords();
   return `<p class="greeting">ことば / Words for your world</p><div class="page-head"><div><h1>Everyday discoveries.</h1><p>Familiar things. A whole new way to say them.</p></div>${scriptTabs()}</div><div class="filter-bar"><label class="search">${icon('search')}<input id="word-search" type="search" placeholder="Find a word…" aria-label="Search Japanese, romaji, or English" value="${escapeText(state.search)}"></label><div class="filters" role="group" aria-label="Vocabulary category">${['All','Everyday','Food','Places','Adjectives','Verbs'].map(category => `<button class="filter ${state.category===category?'active':''}" data-action="category" data-value="${category}" aria-pressed="${state.category===category}">${category}</button>`).join('')}</div></div><div class="section-title"><h2>${scriptName()} words</h2><span class="muted" id="word-count" style="font-size:11px">${words.length} words</span></div><div class="vocab-grid" id="vocab-results">${words.length?words.map(wordCard).join(''):'<p class="empty-state">No words found. Try another word or category.</p>'}</div><p class="muted" style="font-size:11px;line-height:1.8;margin-top:22px">${state.script==='hira'?'Some words include small kana, such as ゃ in おちゃ (ocha). Everyday words are shown in hiragana here; you may also see them written in kanji.':'Some words include marks such as ゛ and ゜, small kana, or ー, which lengthens the previous vowel.'}</p>`;
+}
+function filteredKanji() {
+  const query=state.kanjiSearch.trim().toLowerCase();
+  return (window.kanjiData[state.kanjiGrade]||[]).filter(([character,meaning,on,kun]) => [character,meaning,on,kun].some(value => value.toLowerCase().includes(query)));
+}
+function kanjiCard([character,meaning,on,kun]) {
+  return `<article class="kanji-card"><div class="kanji-card-head"><span class="kanji-character" lang="ja">${character}</span><div><span class="eyebrow">GRADE ${state.kanjiGrade}</span><h2>${meaning}</h2></div></div><div class="kanji-readings">${on?`<p><span>On’yomi</span><strong lang="ja">${on}</strong></p>`:''}${kun?`<p><span>Kun’yomi</span><strong lang="ja">${kun}</strong></p>`:''}</div></article>`;
+}
+function renderKanjiResults() {
+  const kanji=filteredKanji();
+  document.querySelector('#kanji-results').innerHTML=kanji.length?kanji.map(kanjiCard).join(''):'<p class="empty-state">No kanji found. Try another character, meaning, or kana reading.</p>';
+  document.querySelector('#kanji-count').textContent=`${kanji.length} kanji`;
+}
+function renderKanji() {
+  const kanji=filteredKanji();
+  return `<p class="greeting">かんじ / Characters and meanings</p><div class="page-head"><div><h1>Build your kanji foundation.</h1><p>Start with the first two Japanese school grades.</p></div></div><div class="kanji-intro"><strong>Reading guide</strong><p>On’yomi readings are shown in katakana; kun’yomi readings are shown in hiragana. These are common readings, not every possible reading for each kanji.</p></div><div class="kanji-controls"><div class="kanji-grade-tabs" role="group" aria-label="Kanji grade">${[1,2].map(grade => `<button class="kanji-grade-tab ${state.kanjiGrade===grade?'active':''}" data-action="kanji-grade" data-value="${grade}" aria-pressed="${state.kanjiGrade===grade}">Grade ${grade}</button>`).join('')}</div><label class="search kanji-search">${icon('search')}<input id="kanji-search" type="search" placeholder="Find kanji, meaning, or kana reading" aria-label="Search kanji, meaning, or kana reading" value="${escapeText(state.kanjiSearch)}"></label></div><div class="section-title"><h2>Grade ${state.kanjiGrade} kanji</h2><span class="muted" id="kanji-count" style="font-size:11px">${kanji.length} kanji</span></div><div class="kanji-grid" id="kanji-results">${kanji.length?kanji.map(kanjiCard).join(''):'<p class="empty-state">No kanji found. Try another character, meaning, or kana reading.</p>'}</div>`;
 }
 const particleLessons = [
   {jp:'は',sound:'wa',name:'Topic',description:'Marks the topic: what the sentence is about. When used as a particle, は is pronounced wa. It can also set up a contrast.',example:'ねこはかわいいです。',romaji:'Neko wa kawaii desu.',meaning:'Cats are cute.',words:['ねこ','かわいい']},
@@ -548,6 +564,7 @@ app.addEventListener('click', event => {
     if (state.practiceMode==='sentences') startSentencePractice();
     else state.quiz=null;
   }
+  if (action==='kanji-grade') state.kanjiGrade=Number(button.dataset.value);
   if (action==='reveal-translation') state.translationRevealed=true;
   if (action==='next-sentence') {
     state.sentenceIndex++;
@@ -588,11 +605,16 @@ app.addEventListener('click', event => {
   if (action==='next-question') document.querySelector('.answer-button')?.focus({preventScroll:true});
 });
 app.addEventListener('input', event => {
-  if (event.target.id!=='word-search') return;
-  state.search=event.target.value;
-  const words=filteredWords();
-  document.querySelector('#vocab-results').innerHTML=words.length?words.map(wordCard).join(''):'<p class="empty-state">No words found. Try another word or category.</p>';
-  document.querySelector('#word-count').textContent=`${words.length} words`;
-  lucide.createIcons({attrs:{'stroke-width':1.7}});
+  if (event.target.id==='word-search') {
+    state.search=event.target.value;
+    const words=filteredWords();
+    document.querySelector('#vocab-results').innerHTML=words.length?words.map(wordCard).join(''):'<p class="empty-state">No words found. Try another word or category.</p>';
+    document.querySelector('#word-count').textContent=`${words.length} words`;
+    lucide.createIcons({attrs:{'stroke-width':1.7}});
+  }
+  if (event.target.id==='kanji-search') {
+    state.kanjiSearch=event.target.value;
+    renderKanjiResults();
+  }
 });
 render();

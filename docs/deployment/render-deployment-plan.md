@@ -13,7 +13,7 @@ Create one **Static Site** in the Render Dashboard, connected to `https://github
 | Name | `gaigenius-demo` (or another available name) |
 | Branch | `master` |
 | Root Directory | Leave blank (repository root) |
-| Build Command | `mkdir -p dist && cp index.html styles.css app.js writing.js dist/ && cp -R vendor dist/` |
+| Build Command | `mkdir -p dist && cp index.html styles.css app.js writing.js kanji-data.js dist/ && cp -R vendor dist/` |
 | Publish Directory | `dist` |
 | Environment Variables | None |
 | Pull Request Previews | Optional; leave off for the first demo deployment |
