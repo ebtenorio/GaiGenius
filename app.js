@@ -337,8 +337,123 @@ const particleLessons = [
   {jp:'だけ',sound:'dake',name:'Only',description:'Limits a statement to one person or thing: only or just.',example:'おちゃだけのみます。',romaji:'Ocha dake nomimasu.',meaning:'I drink only tea.',words:['おちゃ','のむ']},
   {jp:'しか',sound:'shika',name:'Only, with a negative',description:'Means only or nothing but, and must be used with a negative verb form.',example:'みずしかのみません。',romaji:'Mizu shika nomimasen.',meaning:'I drink nothing but water.',words:['みず','のむ']},
 ];
+const moreParticleExamples = {
+  'は':[
+    ['みずはつめたいです。','Mizu wa tsumetai desu.','Water is cold.',['みず','つめたい']],
+    ['りんごはあまいです。','Ringo wa amai desu.','Apples are sweet.',['りんご','あまい']],
+    ['ねこはげんきです。','Neko wa genki desu.','The cat is well.',['ねこ','げんき']],
+    ['バスはおそいです。','Basu wa osoi desu.','The bus is slow.',['バス','おそい']],
+  ],
+  'が':[
+    ['いぬがいます。','Inu ga imasu.','There is a dog.',['いぬ','いる']],
+    ['ねこがいます。','Neko ga imasu.','There is a cat.',['ねこ','いる']],
+    ['りんごがあまいです。','Ringo ga amai desu.','The apple is sweet.',['りんご','あまい']],
+    ['おちゃがすきです。','Ocha ga suki desu.','I like tea.',['おちゃ','すき']],
+  ],
+  'を':[
+    ['おちゃをのみます。','Ocha o nomimasu.','I drink tea.',['おちゃ','のむ']],
+    ['パンをかいます。','Pan o kaimasu.','I buy bread.',['パン','かう']],
+    ['みずをのみます。','Mizu o nomimasu.','I drink water.',['みず','のむ']],
+    ['ケーキをつくります。','Kēki o tsukurimasu.','I make a cake.',['ケーキ','つくる']],
+  ],
+  'に':[
+    ['えきにいきます。','Eki ni ikimasu.','I go to the station.',['えき','いく']],
+    ['みせにいきます。','Mise ni ikimasu.','I go to the shop.',['みせ','いく']],
+    ['いえにかえります。','Ie ni kaerimasu.','I return home.',['いえ','かえる']],
+    ['うみにいきます。','Umi ni ikimasu.','I go to the sea.',['うみ','いく']],
+  ],
+  'で':[
+    ['うちでやすみます。','Uchi de yasumimasu.','I rest at home.',['うち','やすむ']],
+    ['みせでかいます。','Mise de kaimasu.','I buy it at the shop.',['みせ','かう']],
+    ['ホテルでねます。','Hoteru de nemasu.','I sleep at the hotel.',['ホテル','ねる']],
+    ['うちでおちゃをのみます。','Uchi de ocha o nomimasu.','I drink tea at home.',['うち','おちゃ','のむ']],
+  ],
+  'の':[
+    ['ともだちのいえです。','Tomodachi no ie desu.','It is my friend’s house.',['ともだち','いえ']],
+    ['ホテルのメニューです。','Hoteru no menyū desu.','It is the hotel menu.',['ホテル','メニュー']],
+    ['すしのみせです。','Sushi no mise desu.','It is a sushi shop.',['すし','みせ']],
+    ['わたしのかさです。','Watashi no kasa desu.','It is my umbrella.',['わたし','かさ']],
+  ],
+  'も':[
+    ['ねこもかわいいです。','Neko mo kawaii desu.','The cat is cute too.',['ねこ','かわいい']],
+    ['りんごもあまいです。','Ringo mo amai desu.','The apples are sweet too.',['りんご','あまい']],
+    ['ともだちもすしをたべます。','Tomodachi mo sushi o tabemasu.','My friend eats sushi too.',['ともだち','すし','たべる']],
+    ['バスもきます。','Basu mo kimasu.','The bus comes too.',['バス','くる']],
+  ],
+  'へ':[
+    ['みせへいきます。','Mise e ikimasu.','I go to the shop.',['みせ','いく']],
+    ['ホテルへいきます。','Hoteru e ikimasu.','I go to the hotel.',['ホテル','いく']],
+    ['うちへかえります。','Uchi e kaerimasu.','I head home.',['うち','かえる']],
+    ['うみへいきます。','Umi e ikimasu.','I go toward the sea.',['うみ','いく']],
+  ],
+  'と':[
+    ['いぬとあそびます。','Inu to asobimasu.','I play with the dog.',['いぬ','あそぶ']],
+    ['ねことあそびます。','Neko to asobimasu.','I play with the cat.',['ねこ','あそぶ']],
+    ['ともだちとえきへいきます。','Tomodachi to eki e ikimasu.','I go to the station with a friend.',['ともだち','えき','いく']],
+    ['パンとチーズをかいます。','Pan to chīzu o kaimasu.','I buy bread and cheese.',['パン','チーズ','かう']],
+  ],
+  'や':[
+    ['りんごやバナナをかいます。','Ringo ya banana o kaimasu.','I buy apples, bananas, and things like that.',['りんご','バナナ','かう']],
+    ['すしやサラダをたべます。','Sushi ya sarada o tabemasu.','I eat sushi, salad, and things like that.',['すし','サラダ','たべる']],
+    ['カメラやバッグをかいます。','Kamera ya baggu o kaimasu.','I buy a camera, a bag, and things like that.',['カメラ','バッグ','かう']],
+    ['シャツやズボンをかいます。','Shatsu ya zubon o kaimasu.','I buy shirts, trousers, and things like that.',['シャツ','ズボン','かう']],
+  ],
+  'から':[
+    ['ホテルからみせまであるきます。','Hoteru kara mise made arukimasu.','I walk from the hotel to the shop.',['ホテル','みせ','あるく']],
+    ['あさからはたらきます。','Asa kara hatarakimasu.','I work starting in the morning.',['あさ','はたらく']],
+    ['えきからうちまであるきます。','Eki kara uchi made arukimasu.','I walk from the station to home.',['えき','うち','あるく']],
+    ['みせからうちにかえります。','Mise kara uchi ni kaerimasu.','I return home from the shop.',['みせ','うち','かえる']],
+  ],
+  'まで':[
+    ['あさまでやすみます。','Asa made yasumimasu.','I rest until morning.',['あさ','やすむ']],
+    ['ホテルまでいきます。','Hoteru made ikimasu.','I go as far as the hotel.',['ホテル','いく']],
+    ['レストランまであるきます。','Resutoran made arukimasu.','I walk as far as the restaurant.',['レストラン','あるく']],
+    ['みせまできます。','Mise made kimasu.','I come as far as the shop.',['みせ','くる']],
+  ],
+  'か':[
+    ['すしをたべますか。','Sushi o tabemasu ka?','Would you like to eat sushi?',['すし','たべる']],
+    ['うちにかえりますか。','Uchi ni kaerimasu ka?','Are you going home?',['うち','かえる']],
+    ['りんごがすきですか。','Ringo ga suki desu ka?','Do you like apples?',['りんご','すき']],
+    ['ホテルへいきますか。','Hoteru e ikimasu ka?','Are you going to the hotel?',['ホテル','いく']],
+  ],
+  'ね':[
+    ['みずはつめたいですね。','Mizu wa tsumetai desu ne.','The water is cold, isn’t it?',['みず','つめたい']],
+    ['ねこはかわいいですね。','Neko wa kawaii desu ne.','The cat is cute, isn’t it?',['ねこ','かわいい']],
+    ['やまはたかいですね。','Yama wa takai desu ne.','The mountain is high, isn’t it?',['やま','たかい']],
+    ['りんごはあまいですね。','Ringo wa amai desu ne.','The apples are sweet, aren’t they?',['りんご','あまい']],
+  ],
+  'よ':[
+    ['おちゃはおいしいですよ。','Ocha wa oishii desu yo.','The tea is delicious, you know.',['おちゃ','おいしい']],
+    ['ホテルはきれいですよ。','Hoteru wa kirei desu yo.','The hotel is beautiful, you know.',['ホテル','きれい']],
+    ['りんごはあまいですよ。','Ringo wa amai desu yo.','Apples are sweet, you know.',['りんご','あまい']],
+    ['うみはきれいですよ。','Umi wa kirei desu yo.','The sea is beautiful, you know.',['うみ','きれい']],
+  ],
+  'より':[
+    ['りんごよりバナナがあまいです。','Ringo yori banana ga amai desu.','Bananas are sweeter than apples.',['りんご','バナナ','あまい']],
+    ['ホテルよりうちがしずかです。','Hoteru yori uchi ga shizuka desu.','Home is quieter than the hotel.',['ホテル','うち','しずか']],
+    ['さかなよりすしがすきです。','Sakana yori sushi ga suki desu.','I like sushi more than fish.',['さかな','すし','すき']],
+    ['コーヒーよりおちゃがすきです。','Kōhī yori ocha ga suki desu.','I like tea more than coffee.',['コーヒー','おちゃ','すき']],
+  ],
+  'だけ':[
+    ['すしだけたべます。','Sushi dake tabemasu.','I eat only sushi.',['すし','たべる']],
+    ['ねこだけいます。','Neko dake imasu.','There is only a cat.',['ねこ','いる']],
+    ['りんごだけかいます。','Ringo dake kaimasu.','I buy only apples.',['りんご','かう']],
+    ['ともだちだけきます。','Tomodachi dake kimasu.','Only my friend is coming.',['ともだち','くる']],
+  ],
+  'しか':[
+    ['すししかたべません。','Sushi shika tabemasen.','I eat nothing but sushi.',['すし','たべる']],
+    ['ねこしかいません。','Neko shika imasen.','There is nothing but a cat.',['ねこ','いる']],
+    ['パンしかかいません。','Pan shika kaimasen.','I buy nothing but bread.',['パン','かう']],
+    ['コーヒーしかのみません。','Kōhī shika nomimasen.','I drink nothing but coffee.',['コーヒー','のむ']],
+  ],
+};
+particleLessons.forEach(particle => {
+  const firstExample = {jp:particle.example,romaji:particle.romaji,meaning:particle.meaning,words:particle.words};
+  const additionalExamples = moreParticleExamples[particle.jp].map(([jp,romaji,meaning,words]) => ({jp,romaji,meaning,words}));
+  particle.examples = [firstExample,...additionalExamples];
+});
 function renderParticles() {
-  return `<p class="greeting">じょし / Small words, important work</p><div class="page-head"><div><h1>Particles connect the pieces.</h1><p>A particle follows a word or phrase and shows how it works in the sentence.</p></div></div><div class="particle-note"><strong>A helpful starting point</strong><p>Particles do not map neatly to one English word. Learn the job each one does in its sentence. A few are pronounced differently from their usual kana sound: は as a particle is wa, へ is e, and を is usually o.</p></div><div class="particle-grid">${particleLessons.map(particle => `<article class="particle-card"><div class="particle-card-head"><span class="particle-symbol" lang="ja">${particle.jp}</span><div><span class="particle-sound">${particle.sound}</span><h2>${particle.name}</h2></div></div><p class="particle-description">${particle.description}</p><div class="particle-example"><span class="eyebrow">EXAMPLE</span><p class="particle-japanese" lang="ja">${particle.example}</p><p class="particle-romaji">${particle.romaji}</p><p class="particle-meaning">${particle.meaning}</p><div class="particle-vocabulary"><span>Vocabulary:</span>${particle.words.map(term => { const word=vocabulary.find(item => item.jp===term); return word?`<span class="particle-word" lang="ja" title="${word.en}">${word.jp}<small>${word.en}</small></span>`:''; }).join('')}</div></div></article>`).join('')}</div>`;
+  return `<p class="greeting">じょし / Small words, important work</p><div class="page-head"><div><h1>Particles connect the pieces.</h1><p>A particle follows a word or phrase and shows how it works in the sentence.</p></div></div><div class="particle-note"><strong>A helpful starting point</strong><p>Particles do not map neatly to one English word. Learn the job each one does in its sentence. A few are pronounced differently from their usual kana sound: は as a particle is wa, へ is e, and を is usually o.</p></div><div class="particle-grid">${particleLessons.map(particle => `<article class="particle-card"><div class="particle-card-head"><span class="particle-symbol" lang="ja">${particle.jp}</span><div><span class="particle-sound">${particle.sound}</span><h2>${particle.name}</h2></div></div><p class="particle-description">${particle.description}</p><div class="particle-examples">${particle.examples.map((example,index) => `<div class="particle-example"><span class="eyebrow">EXAMPLE ${index+1}</span><p class="particle-japanese" lang="ja">${example.jp}</p><p class="particle-romaji">${example.romaji}</p><p class="particle-meaning">${example.meaning}</p><div class="particle-vocabulary"><span>Vocabulary:</span>${example.words.map(term => { const word=vocabulary.find(item => item.jp===term); return word?`<span class="particle-word" lang="ja" title="${word.en}">${word.jp}<small>${word.en}</small></span>`:''; }).join('')}</div></div>`).join('')}</div></article>`).join('')}</div>`;
 }
 function shuffle(items) {
   const result = [...items];
