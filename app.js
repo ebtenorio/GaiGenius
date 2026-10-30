@@ -250,7 +250,7 @@ let saved = {};
 try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch { saved = {}; }
 const learned = new Set(Array.isArray(saved.learned) ? saved.learned.filter(value => typeof value === 'string') : []);
 const activity = new Set(Array.isArray(saved.activity) ? saved.activity.filter(value => typeof value === 'string') : []);
-const state = {view:'lessons',script:'hira',row:0,char:0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:'characters',sentenceQueue:[],sentenceIndex:0,translationRevealed:false,kanjiGrade:1,kanjiSearch:''};
+const state = {view:'lessons',lessonsExpanded:window.innerWidth>700,practiceExpanded:false,script:'hira',row:0,char:0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:'characters',practiceKanjiGrade:1,kanjiReadingsRevealed:false,vocabularyReadingRevealed:false,sentenceQueue:[],sentenceIndex:0,translationRevealed:false,kanjiGrade:1,kanjiSearch:''};
 const app = document.querySelector('#app');
 let strokePlayer = null;
 const scriptName = () => state.script === 'hira' ? 'Hiragana' : 'Katakana';
@@ -274,12 +274,13 @@ function scriptTabs() {
 }
 function render() {
   strokePlayer?.destroy();
-  const titles = {lessons:scriptName(),vocabulary:'Vocabulary',particles:'Particles',kanji:'Kanji',practice:'Practice',progress:'Your progress'};
+  const titles = {lessons:`Kana · ${scriptName()}`,vocabulary:'Vocabulary',particles:'Particles',kanji:'Kanji',practice:'Practice',progress:'Your progress'};
+  const lessonsActive=['lessons','vocabulary','particles','kanji'].includes(state.view);
   app.innerHTML = `<aside class="sidebar" aria-label="Main navigation">
     <a class="brand" href="#" data-action="home" aria-label="GaiGenius home"><span class="brand-mark" lang="ja">が</span><span>Gai<span class="accent">Genius</span></span></a>
     <p class="brand-caption">A LITTLE JAPANESE, EVERY DAY.</p>
     <p class="nav-label">YOUR LEARNING SPACE</p>
-    <nav class="nav">${[['lessons','book','Lessons'],['vocabulary','grid','Vocabulary'],['particles','bulb','Particles'],['kanji','grid','Kanji'],['practice','practice','Practice'],['progress','chart','My progress']].map(([view,symbol,label]) => `<button class="nav-button ${state.view===view?'active':''}" data-action="view" data-value="${view}" ${state.view===view?'aria-current="page"':''}>${icon(symbol)}<span>${label}</span>${view==='lessons'?'<span class="nav-dot">あ</span>':''}</button>`).join('')}</nav>
+    <nav class="nav" aria-label="Learning sections"><div class="nav-group ${lessonsActive?'active':''} ${state.lessonsExpanded?'is-expanded':''}"><button class="nav-button nav-lessons ${lessonsActive?'active':''}" type="button" data-action="toggle-lessons" aria-expanded="${state.lessonsExpanded}" aria-controls="lessons-submenu">${icon('book')}<span>Lessons</span><span class="nav-chevron">${icon('chevron')}</span></button><div class="nav-submenu" id="lessons-submenu" ${state.lessonsExpanded?'':'hidden'}><button class="nav-sub-button ${state.view==='lessons'?'active':''}" type="button" data-action="view" data-value="lessons" ${state.view==='lessons'?'aria-current="page"':''}>Kana</button><button class="nav-sub-button ${state.view==='vocabulary'?'active':''}" type="button" data-action="view" data-value="vocabulary" ${state.view==='vocabulary'?'aria-current="page"':''}>Vocabulary</button><button class="nav-sub-button ${state.view==='particles'?'active':''}" type="button" data-action="view" data-value="particles" ${state.view==='particles'?'aria-current="page"':''}>Particles</button><button class="nav-sub-button ${state.view==='kanji'?'active':''}" type="button" data-action="view" data-value="kanji" ${state.view==='kanji'?'aria-current="page"':''}>Kanji</button></div></div><div class="nav-group ${state.view==='practice'?'active':''} ${state.practiceExpanded?'is-expanded':''}"><button class="nav-button nav-practice ${state.view==='practice'?'active':''}" type="button" data-action="toggle-practice" aria-expanded="${state.practiceExpanded}" aria-controls="practice-submenu">${icon('practice')}<span>Practice</span><span class="nav-chevron">${icon('chevron')}</span></button><div class="nav-submenu" id="practice-submenu" ${state.practiceExpanded?'':'hidden'}><button class="nav-sub-button ${state.view==='practice'&&state.practiceMode==='characters'?'active':''}" type="button" data-action="practice-mode" data-value="characters" ${state.view==='practice'&&state.practiceMode==='characters'?'aria-current="page"':''}>Hiragana / Katakana</button><button class="nav-sub-button ${state.view==='practice'&&state.practiceMode==='vocabulary'?'active':''}" type="button" data-action="practice-mode" data-value="vocabulary" ${state.view==='practice'&&state.practiceMode==='vocabulary'?'aria-current="page"':''}>Vocabulary</button><button class="nav-sub-button ${state.view==='practice'&&state.practiceMode==='sentences'?'active':''}" type="button" data-action="practice-mode" data-value="sentences" ${state.view==='practice'&&state.practiceMode==='sentences'?'aria-current="page"':''}>Simple Sentence Translation</button><button class="nav-sub-button ${state.view==='practice'&&state.practiceMode==='kanji'?'active':''}" type="button" data-action="practice-mode" data-value="kanji" ${state.view==='practice'&&state.practiceMode==='kanji'?'aria-current="page"':''}>Kanji Recognition by Grade</button></div></div><button class="nav-button ${state.view==='progress'?'active':''}" type="button" data-action="view" data-value="progress" ${state.view==='progress'?'aria-current="page"':''}>${icon('chart')}<span>My progress</span></button></nav>
     <div class="sidebar-note"><div class="jp" lang="ja">一歩ずつ。</div><p>One step at a time.<br>That's how every journey begins.</p></div>
     <div class="sidebar-foot">${icon('shield')} Free to learn. Always.</div>
     </aside><div class="shell"><header class="topbar"><div class="breadcrumb">Your learning space ${icon('chevron')} <strong>${titles[state.view]}</strong></div><a class="brand mobile-brand" href="#" data-action="home" aria-label="GaiGenius home"><span class="brand-mark" lang="ja">が</span><span>Gai<span class="accent">Genius</span></span></a><div class="topbar-right"><span class="streak" title="Consecutive days of learning">${icon('flame')} ${streak()} day${streak()===1?'':'s'}</span><span class="guest" title="Learning without an account" aria-label="Guest learner">${icon('user')}</span></div></header>
@@ -514,7 +515,28 @@ function shuffle(items) {
 function startQuiz() {
   const pool = characters();
   const questions = shuffle(pool).slice(0,10).map(item => ({...item,options:shuffle([item.sound,...shuffle(pool.filter(other => other.sound!==item.sound)).slice(0,3).map(other => other.sound)])}));
-  state.quiz = {questions,index:0,score:0,answer:null};
+  state.quiz = {type:'kana',questions,index:0,score:0,answer:null};
+}
+function startKanjiQuiz() {
+  const pool=window.kanjiData[state.practiceKanjiGrade]||[];
+  const questions=shuffle(pool).slice(0,10).map(([character,meaning])=>{
+    const distractors=shuffle([...new Set(pool.map(item=>item[1]).filter(option=>option!==meaning))]).slice(0,3);
+    return {character,meaning,options:shuffle([meaning,...distractors])};
+  });
+  state.quiz={type:'kanji',grade:state.practiceKanjiGrade,questions,index:0,score:0,answer:null};
+  state.kanjiReadingsRevealed=false;
+}
+function startVocabularyQuiz() {
+  const pool=[...new Map(vocabulary.map(word=>[word.en,word])).values()];
+  const questions=shuffle(pool).slice(0,10).map(word=>{
+    const distractors=shuffle(pool.filter(other=>other.en!==word.en)).slice(0,3).map(other=>other.en);
+    return {character:word.jp,reading:word.romaji,meaning:word.en,options:shuffle([word.en,...distractors])};
+  });
+  state.quiz={type:'vocabulary',questions,index:0,score:0,answer:null};
+  state.vocabularyReadingRevealed=false;
+}
+function correctQuizAnswer(quiz,question) {
+  return quiz.type==='kanji'||quiz.type==='vocabulary'?question.meaning:question.sound;
 }
 function sentencePracticePool() {
   const examples=particleLessons.flatMap(particle => particle.examples.map(example => ({...example,particle:particle.jp})));
@@ -525,23 +547,38 @@ function startSentencePractice() {
   state.sentenceIndex=0;
   state.translationRevealed=false;
 }
-function practiceModeTabs() {
-  return `<div class="practice-mode-tabs" role="group" aria-label="Practice mode"><button class="practice-mode-tab ${state.practiceMode==='characters'?'active':''}" data-action="practice-mode" data-value="characters" aria-pressed="${state.practiceMode==='characters'}">Identify kana</button><button class="practice-mode-tab ${state.practiceMode==='sentences'?'active':''}" data-action="practice-mode" data-value="sentences" aria-pressed="${state.practiceMode==='sentences'}">Translate sentences</button></div>`;
-}
 function renderPractice() {
-  const heading=`<p class="greeting">れんしゅう / A little practice</p><div class="page-head"><div><h1>Make it second nature.</h1><p>Identify kana or try translating a sentence.</p></div></div>${practiceModeTabs()}`;
+  const headings={characters:['Recognize Hiragana and Katakana.','Choose the sound that matches each kana character.'],vocabulary:['Practice everyday vocabulary.','Choose the English meaning of each word in kana.'],sentences:['Translate a simple sentence.','Try translating before revealing the reading and English.'],kanji:['Recognize Kanji by grade.','Choose the meaning of each Grade 1 or Grade 2 kanji.']};
+  const [title,description]=headings[state.practiceMode]||headings.characters;
+  const heading=`<p class="greeting">れんしゅう / A little practice</p><div class="page-head"><div><h1>${title}</h1><p>${description}</p></div></div>`;
   if (state.practiceMode==='sentences') {
     if (!state.sentenceQueue.length) startSentencePractice();
     const sentence=state.sentenceQueue[state.sentenceIndex];
     return `${heading}<div class="practice-layout"><section class="practice-card sentence-practice-card" aria-label="Sentence translation practice"><div class="quiz-meta"><span>TRANSLATE THIS SENTENCE</span><span>Particle: <strong lang="ja">${sentence.particle}</strong></span></div><p class="sentence-practice-prompt">Try translating it before you reveal the answer. There is no score in this mode.</p><div class="sentence-practice-japanese" lang="ja">${sentence.jp}</div>${state.translationRevealed?`<div class="translation-reveal" role="status"><div><span class="eyebrow">READING</span><p class="sentence-practice-romaji">${sentence.romaji}</p></div><div><span class="eyebrow">ENGLISH TRANSLATION</span><p>${sentence.meaning}</p></div></div>`:`<button class="text-button reveal-translation" data-action="reveal-translation">Reveal reading &amp; translation ${icon('arrow')}</button>`}<button class="primary-button next-sentence" data-action="next-sentence">Next sentence ${icon('arrow')}</button></section></div>`;
   }
-  if (!state.quiz) startQuiz();
-  const quiz = state.quiz;
-  const complete = quiz.index>=quiz.questions.length;
-  const question = quiz.questions[quiz.index];
-  return `${heading}<div class="practice-layout"><div class="practice-options"><p>${complete?'Session complete':`${scriptName()} · ${quiz.questions.length} randomized characters`}</p>${scriptTabs()}</div><section class="practice-card" aria-label="Character recognition quiz">${complete?`
-    <div class="completion-icon">${icon('trophy')}</div><h2 class="result-title">${quiz.score===quiz.questions.length?'Beautifully done!':'Another step forward.'}</h2><p class="result-description">${quiz.score===quiz.questions.length?'Every sound found its place.':'Keep coming back. Familiarity grows with practice.'}</p><div class="result-score">${quiz.score}<span class="muted"> / ${quiz.questions.length}</span></div><p class="muted">correct answers</p><div class="result-actions"><button class="secondary-button" data-action="view" data-value="lessons">Back to lessons</button><button class="primary-button" data-action="restart">Practice again ${icon('arrow')}</button></div>`:`
-    <div class="quiz-meta"><span>QUESTION ${quiz.index+1} OF ${quiz.questions.length}</span><span>${quiz.score} correct</span></div><div class="progress-track"><div class="progress-fill" style="width:${quiz.index/quiz.questions.length*100}%"></div></div><div class="quiz-character" lang="ja">${question.character}</div><p class="quiz-prompt">Which sound matches this character?</p><div class="answer-grid">${question.options.map(option => `<button class="answer-button ${quiz.answer!==null?(option===question.sound?'correct':option===quiz.answer?'wrong':''):''}" data-action="answer" data-value="${option}" ${quiz.answer!==null?'disabled':''}>${option}</button>`).join('')}</div><div class="quiz-feedback" role="status">${quiz.answer===null?'':quiz.answer===question.sound?'That’s right. Nicely done!':`This is “${question.sound}”. You’ll get it next time.`}</div>${quiz.answer!==null?`<button class="primary-button quiz-action" data-action="next-question">${quiz.index===quiz.questions.length-1?'See results':'Next character'} ${icon('arrow')}</button>`:''}`}</section></div>`;
+  const isKanji=state.practiceMode==='kanji';
+  const isVocabulary=state.practiceMode==='vocabulary';
+  const quizType=isKanji?'kanji':isVocabulary?'vocabulary':'kana';
+  if (!state.quiz || state.quiz.type!==quizType || (isKanji&&state.quiz.grade!==state.practiceKanjiGrade)) {
+    if (isKanji) startKanjiQuiz();
+    else if (isVocabulary) startVocabularyQuiz();
+    else startQuiz();
+  }
+  const quiz=state.quiz;
+  const complete=quiz.index>=quiz.questions.length;
+  const question=quiz.questions[quiz.index];
+  const correctAnswer=question?correctQuizAnswer(quiz,question):'';
+  const questionDescription=isKanji?`Grade ${quiz.grade} · ${quiz.questions.length} randomized kanji`:isVocabulary?`${quiz.questions.length} randomized vocabulary words`:`${scriptName()} · ${quiz.questions.length} randomized characters`;
+  const modeControls=isKanji?`<div class="kanji-grade-tabs practice-kanji-grades" role="group" aria-label="Kanji practice grade">${[1,2].map(grade=>`<button class="kanji-grade-tab ${state.practiceKanjiGrade===grade?'active':''}" type="button" data-action="practice-kanji-grade" data-value="${grade}" aria-pressed="${state.practiceKanjiGrade===grade}">Grade ${grade}</button>`).join('')}</div>`:isVocabulary?'':scriptTabs();
+  const kanjiEntry=isKanji&&question?(window.kanjiData[quiz.grade]||[]).find(([character])=>character===question.character):null;
+  const kanjiReadings=kanjiEntry?`<button class="text-button kanji-reading-toggle" type="button" data-action="toggle-kanji-readings" aria-expanded="${state.kanjiReadingsRevealed}">${state.kanjiReadingsRevealed?'Hide':'Reveal'} On’yomi / Kun’yomi readings</button><div class="kanji-readings kanji-quiz-readings" ${state.kanjiReadingsRevealed?'':'hidden'}>${kanjiEntry[2]?`<p><span>On’yomi</span><strong lang="ja">${kanjiEntry[2]}</strong></p>`:''}${kanjiEntry[3]?`<p><span>Kun’yomi</span><strong lang="ja">${kanjiEntry[3]}</strong></p>`:''}${!kanjiEntry[2]&&!kanjiEntry[3]?'<p>No readings are listed for this character.</p>':''}</div>`:'';
+  const vocabularyReading=question&&isVocabulary?`<button class="text-button vocabulary-reading-toggle" type="button" data-action="toggle-vocabulary-reading" aria-expanded="${state.vocabularyReadingRevealed}">${state.vocabularyReadingRevealed?'Hide':'Reveal'} reading</button><p class="vocabulary-quiz-reading" ${state.vocabularyReadingRevealed?'':'hidden'}>${question.reading}</p>`:'';
+  const resultCopy=quiz.score===quiz.questions.length?(isKanji?'Every character found its meaning.':isVocabulary?'Every word found its meaning.':'Every sound found its place.'):'Keep coming back. Familiarity grows with practice.';
+  const quizLabel=isKanji?'Kanji meaning recognition quiz':isVocabulary?'Vocabulary meaning quiz':'Kana character recognition quiz';
+  const prompt=isKanji?'Which meaning matches this kanji?':isVocabulary?'What does this word mean?':'Which sound matches this character?';
+  return `${heading}<div class="practice-layout"><div class="practice-options"><p>${complete?'Session complete':questionDescription}</p>${modeControls}</div><section class="practice-card" aria-label="${quizLabel}">${complete?`
+    <div class="completion-icon">${icon('trophy')}</div><h2 class="result-title">${quiz.score===quiz.questions.length?'Beautifully done!':'Another step forward.'}</h2><p class="result-description">${resultCopy}</p><div class="result-score">${quiz.score}<span class="muted"> / ${quiz.questions.length}</span></div><p class="muted">correct answers</p><div class="result-actions"><button class="secondary-button" data-action="view" data-value="lessons">Back to lessons</button><button class="primary-button" data-action="restart">Practice again ${icon('arrow')}</button></div>`:`
+    <div class="quiz-meta"><span>QUESTION ${quiz.index+1} OF ${quiz.questions.length}</span><span>${quiz.score} correct</span></div><div class="progress-track"><div class="progress-fill" style="width:${quiz.index/quiz.questions.length*100}%"></div></div><div class="quiz-character ${isVocabulary?'vocabulary-quiz-word':''}" lang="ja">${question.character}</div>${kanjiReadings}${vocabularyReading}<p class="quiz-prompt">${prompt}</p><div class="answer-grid">${question.options.map(option=>`<button class="answer-button ${quiz.answer!==null?(option===correctAnswer?'correct':option===quiz.answer?'wrong':''):''}" data-action="answer" data-value="${option}" ${quiz.answer!==null?'disabled':''}>${option}</button>`).join('')}</div><div class="quiz-feedback" role="status">${quiz.answer===null?'':quiz.answer===correctAnswer?'That’s right. Nicely done!':`This is “${correctAnswer}”. You’ll get it next time.`}</div>${quiz.answer!==null?`<button class="primary-button quiz-action" data-action="next-question">${quiz.index===quiz.questions.length-1?'See results':isKanji?'Next kanji':isVocabulary?'Next word':'Next character'} ${icon('arrow')}</button>`:''}`}</section></div>`;
 }
 function renderProgress() {
   return `<div class="progress-view"><p class="greeting">一歩ずつ / One step at a time</p><div class="page-head"><div><h1>Your journey, so far.</h1><p>Every character is a small win worth keeping.</p></div></div><div class="progress-stats"><article class="stat">${icon('book')}<strong>${charactersForAllScripts().filter(character => learned.has(character)).length}<span class="muted" style="font-size:15px"> / 92</span></strong><p>Characters explored</p></article><article class="stat">${icon('flame')}<strong>${streak()}</strong><p>Day learning streak</p></article><article class="stat">${icon('target')}<strong>${state.quizzes}</strong><p>Practice sessions</p></article></div><div class="section-title"><h2>Your character collection</h2>${scriptTabs()}</div><div class="kana-chart">${characters().map(item => `<button class="chart-cell ${learned.has(item.character)?'learned':''}" data-action="open-character" data-row="${item.row}" data-index="${item.index}" aria-label="Study ${item.character}, ${item.sound}${learned.has(item.character)?', learned':''}"><span class="jp" lang="ja">${item.character}</span><small>${item.sound}</small></button>`).join('')}</div><p class="muted" style="font-size:11px">${countLearned()} of 46 ${scriptName().toLowerCase()} characters explored.</p></div>`;
@@ -586,9 +623,17 @@ app.addEventListener('click', event => {
   }
   if (action==='practice-mode') {
     state.practiceMode=button.dataset.value;
+    state.view='practice';
+    state.practiceExpanded=window.innerWidth>700;
     if (state.practiceMode==='sentences') startSentencePractice();
-    else state.quiz=null;
+    else if (state.practiceMode==='kanji') startKanjiQuiz();
+    else if (state.practiceMode==='vocabulary') startVocabularyQuiz();
+    else startQuiz();
   }
+  if (action==='toggle-practice') state.practiceExpanded=!state.practiceExpanded;
+  if (action==='practice-kanji-grade') { state.practiceKanjiGrade=Number(button.dataset.value); startKanjiQuiz(); }
+  if (action==='toggle-kanji-readings') state.kanjiReadingsRevealed=!state.kanjiReadingsRevealed;
+  if (action==='toggle-vocabulary-reading') state.vocabularyReadingRevealed=!state.vocabularyReadingRevealed;
   if (action==='kanji-grade') state.kanjiGrade=Number(button.dataset.value);
   if (action==='reveal-translation') state.translationRevealed=true;
   if (action==='next-sentence') {
@@ -596,8 +641,14 @@ app.addEventListener('click', event => {
     if (state.sentenceIndex>=state.sentenceQueue.length) startSentencePractice();
     else state.translationRevealed=false;
   }
-  if (action==='home') { event.preventDefault(); state.view='lessons'; }
-  if (action==='view') { state.view=button.dataset.value; window.scrollTo({top:0,behavior:'instant'}); }
+  if (action==='home') { event.preventDefault(); state.view='lessons'; state.lessonsExpanded=window.innerWidth>700; state.practiceExpanded=false; }
+  if (action==='toggle-lessons') state.lessonsExpanded=!state.lessonsExpanded;
+  if (action==='view') {
+    state.view=button.dataset.value;
+    if (['lessons','vocabulary','particles','kanji'].includes(state.view)) state.lessonsExpanded=window.innerWidth>700;
+    state.practiceExpanded=state.view==='practice'&&window.innerWidth>700;
+    window.scrollTo({top:0,behavior:'instant'});
+  }
   if (action==='script') { state.script=button.dataset.value; state.char=0; state.quiz=null; }
   if (action==='row') { state.row=Number(button.dataset.index); state.char=0; }
   if (action==='character') state.char=Number(button.dataset.index);
@@ -613,16 +664,18 @@ app.addEventListener('click', event => {
       toast(`${rows[completedRow].name} lesson complete. A lovely step forward!`);
     }
   }
-  if (action==='open-character') { state.view='lessons'; state.row=Number(button.dataset.row); state.char=Number(button.dataset.index); window.scrollTo({top:0,behavior:'instant'}); }
-  if (action==='restart') startQuiz();
+  if (action==='open-character') { state.view='lessons'; state.lessonsExpanded=window.innerWidth>700; state.practiceExpanded=false; state.row=Number(button.dataset.row); state.char=Number(button.dataset.index); window.scrollTo({top:0,behavior:'instant'}); }
+  if (action==='restart') { if (state.practiceMode==='kanji') startKanjiQuiz(); else if (state.practiceMode==='vocabulary') startVocabularyQuiz(); else startQuiz(); }
   if (action==='answer') {
     if (!state.quiz || state.quiz.answer!==null) return;
     state.quiz.answer=button.dataset.value;
-    if (state.quiz.answer===state.quiz.questions[state.quiz.index].sound) state.quiz.score++;
+    if (state.quiz.answer===correctQuizAnswer(state.quiz,state.quiz.questions[state.quiz.index])) state.quiz.score++;
   }
   if (action==='next-question') {
     if (!state.quiz || state.quiz.answer===null) return;
     state.quiz.index++; state.quiz.answer=null;
+    state.kanjiReadingsRevealed=false;
+    state.vocabularyReadingRevealed=false;
     if (state.quiz.index===state.quiz.questions.length) { state.quizzes++; activity.add(localDate()); saveProgress(); }
   }
   render();
