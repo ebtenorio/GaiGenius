@@ -250,14 +250,37 @@ let saved = {};
 try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch { saved = {}; }
 const learned = new Set(Array.isArray(saved.learned) ? saved.learned.filter(value => typeof value === 'string') : []);
 const activity = new Set(Array.isArray(saved.activity) ? saved.activity.filter(value => typeof value === 'string') : []);
-const state = {view:'home',lessonsExpanded:window.innerWidth>700,practiceExpanded:false,script:'hira',row:0,char:0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:'characters',practiceKanjiGrade:1,kanjiReadingsRevealed:false,vocabularyReadingRevealed:false,sentenceQueue:[],sentenceIndex:0,translationRevealed:false,kanjiGrade:1,kanjiSearch:''};
+const resumeViews=['lessons','vocabulary','particles','kanji','practice'];
+const savedResume=(()=>{
+  const resume=saved.resume;
+  if (!resume || !resumeViews.includes(resume.view)) return null;
+  const script=resume.script==='kata'?'kata':'hira';
+  const row=Number.isInteger(resume.row)?Math.max(0,Math.min(rows.length-1,resume.row)):0;
+  const char=Number.isInteger(resume.char)?Math.max(0,Math.min(rows[row].sounds.length-1,resume.char)):0;
+  const practiceMode=['characters','vocabulary','sentences','kanji'].includes(resume.practiceMode)?resume.practiceMode:'characters';
+  const practiceKanjiGrade=Number.isInteger(resume.practiceKanjiGrade)&&resume.practiceKanjiGrade>=1&&resume.practiceKanjiGrade<=6?resume.practiceKanjiGrade:1;
+  const kanjiGrade=Number.isInteger(resume.kanjiGrade)&&resume.kanjiGrade>=1&&resume.kanjiGrade<=6?resume.kanjiGrade:1;
+  return {view:resume.view,script,row,char,practiceMode,practiceKanjiGrade,kanjiGrade};
+})();
+const state = {view:'home',lessonsExpanded:window.innerWidth>700,practiceExpanded:false,script:savedResume?.script||'hira',row:savedResume?.row||0,char:savedResume?.char||0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:savedResume?.practiceMode||'characters',practiceKanjiGrade:savedResume?.practiceKanjiGrade||1,kanjiReadingsRevealed:false,vocabularyReadingRevealed:false,sentenceQueue:[],sentenceIndex:0,translationRevealed:false,kanjiGrade:savedResume?.kanjiGrade||1,kanjiSearch:'',resume:savedResume};
 const app = document.querySelector('#app');
 let strokePlayer = null;
 const scriptName = () => state.script === 'hira' ? 'Hiragana' : 'Katakana';
 const localDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 function saveProgress() {
-  try { localStorage.setItem(storageKey, JSON.stringify({learned:[...learned],activity:[...activity],quizzes:state.quizzes})); }
+  try { localStorage.setItem(storageKey, JSON.stringify({learned:[...learned],activity:[...activity],quizzes:state.quizzes,resume:state.resume})); }
   catch { toast('Browser storage is unavailable. Progress will last for this visit.'); }
+}
+function rememberLearningPlace() {
+  if (!resumeViews.includes(state.view)) return;
+  state.resume={view:state.view,script:state.script,row:state.row,char:state.char,practiceMode:state.practiceMode,practiceKanjiGrade:state.practiceKanjiGrade,kanjiGrade:state.kanjiGrade};
+  saveProgress();
+}
+function resumeDescription() {
+  if (!state.resume) return 'Start with Hiragana';
+  if (state.resume.view==='lessons') return `${state.resume.script==='hira'?'Hiragana':'Katakana'} · ${rows[state.resume.row].name}`;
+  if (state.resume.view==='practice') return ({characters:'Kana identification practice',vocabulary:'Vocabulary practice',sentences:'Sentence translation practice',kanji:`Kanji recognition · Grade ${state.resume.practiceKanjiGrade}`})[state.resume.practiceMode];
+  return ({vocabulary:'Vocabulary lesson',particles:'Particles lesson',kanji:`Kanji lesson · Grade ${state.resume.kanjiGrade}`})[state.resume.view];
 }
 function streak() {
   const date = new Date();
@@ -270,7 +293,7 @@ const characters = () => rows.flatMap((row,rowIndex) => [...row[state.script]].m
 const countLearned = () => characters().filter(item => learned.has(item.character)).length;
 const escapeText = text => String(text).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 function renderHome() {
-  return `<section class="home-view"><p class="greeting">ようこそ / Welcome</p><div class="home-hero"><div><span class="eyebrow">A LITTLE JAPANESE, EVERY DAY</span><h1>Start with the sounds.<br>Build toward real sentences.</h1><p>GaiGenius is a simple, self-paced path through Japanese writing, everyday words, and sentence building. Learn a little at a time, then use Practice to check what you remember.</p><button class="primary-button" data-action="view" data-value="lessons">Start with Kana ${icon('arrow')}</button></div><div class="home-hero-mark" lang="ja" aria-hidden="true">あ<br>ア</div></div><div class="section-title home-section-heading"><h2>A suggested learning order</h2><span class="muted">You can revisit any lesson whenever you like.</span></div><div class="learning-path"><article class="path-step"><span class="path-number">01</span><div><span class="eyebrow">LESSONS · START HERE</span><h3>Kana: Hiragana, then Katakana</h3><p>Learn the basic sounds and characters first. Follow the bite-sized rows and use the stroke guides to see how each character is written.</p><button class="text-button" data-action="view" data-value="lessons">Open Kana lessons ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">02</span><div><span class="eyebrow">LESSONS</span><h3>Everyday vocabulary</h3><p>Build a useful base of common words, including food, places, adjectives, and verbs.</p><button class="text-button" data-action="view" data-value="vocabulary">Explore Vocabulary ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">03</span><div><span class="eyebrow">LESSONS</span><h3>Particles</h3><p>See how particles such as は, が, を, に, and で connect words and show their roles in a sentence.</p><button class="text-button" data-action="view" data-value="particles">Explore Particles ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">04</span><div><span class="eyebrow">LESSONS</span><h3>Kanji, Grade 1 through Grade 6</h3><p>Meet the school-grade kanji with their meanings, kana readings, and sentence examples.</p><button class="text-button" data-action="view" data-value="kanji">Explore Kanji ${icon('arrow')}</button></div></article></div><section class="home-practice"><div class="section-title"><div><span class="eyebrow">PRACTICE · USE IT AS YOU LEARN</span><h2>Short practice for each step</h2></div><p class="muted">Try a matching practice after each lesson. Translation practice lets you reveal the answer when you’re ready.</p></div><div class="home-practice-grid"><button class="home-practice-card" data-action="practice-mode" data-value="characters"><span class="home-practice-symbol" lang="ja">あ ア</span><strong>Hiragana / Katakana</strong><span>Identify a random kana character.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="vocabulary"><span class="home-practice-symbol" lang="ja">ことば</span><strong>Vocabulary</strong><span>Choose the meaning of a word in kana.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="sentences"><span class="home-practice-symbol" lang="ja">文</span><strong>Simple Sentence Translation</strong><span>Try a sentence, then reveal its reading and translation.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="kanji"><span class="home-practice-symbol" lang="ja">漢字</span><strong>Kanji Recognition by Grade</strong><span>Practice recognizing kanji from a selected grade.</span>${icon('arrow')}</button></div></section><p class="home-note">Suggested path: Kana → Vocabulary → Particles → Kanji. Practice alongside each lesson and move at your own pace.</p></section>`;
+  return `<section class="home-view"><p class="greeting">ようこそ / Welcome</p><div class="home-hero"><div><span class="eyebrow">A LITTLE JAPANESE, EVERY DAY</span><h1>Start with the sounds.<br>Build toward real sentences.</h1><p>GaiGenius is a simple, self-paced path through Japanese writing, everyday words, and sentence building. Learn a little at a time, then use Practice to check what you remember.</p><p class="resume-hint">${escapeText(resumeDescription())}</p><button class="primary-button" data-action="continue-learning">Continue learning ${icon('arrow')}</button></div><div class="home-hero-mark" lang="ja" aria-hidden="true">あ<br>ア</div></div><div class="section-title home-section-heading"><h2>A suggested learning order</h2><span class="muted">You can revisit any lesson whenever you like.</span></div><div class="learning-path"><article class="path-step"><span class="path-number">01</span><div><span class="eyebrow">LESSONS · START HERE</span><h3>Kana: Hiragana, then Katakana</h3><p>Learn the basic sounds and characters first. Follow the bite-sized rows and use the stroke guides to see how each character is written.</p><button class="text-button" data-action="view" data-value="lessons">Open Kana lessons ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">02</span><div><span class="eyebrow">LESSONS</span><h3>Everyday vocabulary</h3><p>Build a useful base of common words, including food, places, adjectives, and verbs.</p><button class="text-button" data-action="view" data-value="vocabulary">Explore Vocabulary ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">03</span><div><span class="eyebrow">LESSONS</span><h3>Particles</h3><p>See how particles such as は, が, を, に, and で connect words and show their roles in a sentence.</p><button class="text-button" data-action="view" data-value="particles">Explore Particles ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">04</span><div><span class="eyebrow">LESSONS</span><h3>Kanji, Grade 1 through Grade 6</h3><p>Meet the school-grade kanji with their meanings, kana readings, and sentence examples.</p><button class="text-button" data-action="view" data-value="kanji">Explore Kanji ${icon('arrow')}</button></div></article></div><section class="home-practice"><div class="section-title"><div><span class="eyebrow">PRACTICE · USE IT AS YOU LEARN</span><h2>Short practice for each step</h2></div><p class="muted">Try a matching practice after each lesson. Translation practice lets you reveal the answer when you’re ready.</p></div><div class="home-practice-grid"><button class="home-practice-card" data-action="practice-mode" data-value="characters"><span class="home-practice-symbol" lang="ja">あ ア</span><strong>Hiragana / Katakana</strong><span>Identify a random kana character.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="vocabulary"><span class="home-practice-symbol" lang="ja">ことば</span><strong>Vocabulary</strong><span>Choose the meaning of a word in kana.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="sentences"><span class="home-practice-symbol" lang="ja">文</span><strong>Simple Sentence Translation</strong><span>Try a sentence, then reveal its reading and translation.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="kanji"><span class="home-practice-symbol" lang="ja">漢字</span><strong>Kanji Recognition by Grade</strong><span>Practice recognizing kanji from a selected grade.</span>${icon('arrow')}</button></div></section><p class="home-note">Suggested path: Kana → Vocabulary → Particles → Kanji. Practice alongside each lesson and move at your own pace.</p></section>`;
 }
 function scriptTabs() {
   return `<div class="script-tabs" role="group" aria-label="Japanese script">${['hira','kata'].map(script => `<button class="script-tab ${state.script===script?'active':''}" data-action="script" data-value="${script}" aria-pressed="${state.script===script}">${script==='hira'?'Hiragana':'Katakana'}</button>`).join('')}</div>`;
@@ -608,6 +631,25 @@ app.addEventListener('click', event => {
   if (action==='speak') { speak(button.dataset.text); return; }
   if (action==='particle-examples') { openParticleExamples(button.dataset.value); return; }
   if (action==='kanji-examples') { openKanjiExamples(button.dataset.value); return; }
+  if (action==='continue-learning') {
+    const resume=state.resume;
+    state.view=resume?.view||'lessons';
+    state.script=resume?.script||'hira';
+    state.row=resume?.row||0;
+    state.char=resume?.char||0;
+    state.practiceMode=resume?.practiceMode||'characters';
+    state.practiceKanjiGrade=resume?.practiceKanjiGrade||1;
+    state.kanjiGrade=resume?.kanjiGrade||1;
+    state.lessonsExpanded=resumeViews.includes(state.view)&&state.view!=='practice'&&window.innerWidth>700;
+    state.practiceExpanded=state.view==='practice'&&window.innerWidth>700;
+    if (state.view==='practice') {
+      if (state.practiceMode==='sentences') startSentencePractice();
+      else if (state.practiceMode==='kanji') startKanjiQuiz();
+      else if (state.practiceMode==='vocabulary') startVocabularyQuiz();
+      else startQuiz();
+    } else if (!resume) rememberLearningPlace();
+    window.scrollTo({top:0,behavior:'instant'});
+  }
   if (action==='reveal-particle-example') {
     const answer=button.closest('.particle-example')?.querySelector('[data-example-answer]');
     if (!answer) return;
@@ -624,12 +666,13 @@ app.addEventListener('click', event => {
     else if (state.practiceMode==='kanji') startKanjiQuiz();
     else if (state.practiceMode==='vocabulary') startVocabularyQuiz();
     else startQuiz();
+    rememberLearningPlace();
   }
   if (action==='toggle-practice') state.practiceExpanded=!state.practiceExpanded;
-  if (action==='practice-kanji-grade') { state.practiceKanjiGrade=Number(button.dataset.value); startKanjiQuiz(); }
+  if (action==='practice-kanji-grade') { state.practiceKanjiGrade=Number(button.dataset.value); startKanjiQuiz(); rememberLearningPlace(); }
   if (action==='toggle-kanji-readings') state.kanjiReadingsRevealed=!state.kanjiReadingsRevealed;
   if (action==='toggle-vocabulary-reading') state.vocabularyReadingRevealed=!state.vocabularyReadingRevealed;
-  if (action==='kanji-grade') state.kanjiGrade=Number(button.dataset.value);
+  if (action==='kanji-grade') { state.kanjiGrade=Number(button.dataset.value); rememberLearningPlace(); }
   if (action==='reveal-translation') state.translationRevealed=true;
   if (action==='next-sentence') {
     state.sentenceIndex++;
@@ -642,15 +685,16 @@ app.addEventListener('click', event => {
     state.view=button.dataset.value;
     if (['lessons','vocabulary','particles','kanji'].includes(state.view)) state.lessonsExpanded=window.innerWidth>700;
     state.practiceExpanded=state.view==='practice'&&window.innerWidth>700;
+    rememberLearningPlace();
     window.scrollTo({top:0,behavior:'instant'});
   }
-  if (action==='script') { state.script=button.dataset.value; state.char=0; state.quiz=null; }
-  if (action==='row') { state.row=Number(button.dataset.index); state.char=0; }
-  if (action==='character') state.char=Number(button.dataset.index);
+  if (action==='script') { state.script=button.dataset.value; state.char=0; state.quiz=null; rememberLearningPlace(); }
+  if (action==='row') { state.row=Number(button.dataset.index); state.char=0; rememberLearningPlace(); }
+  if (action==='character') { state.char=Number(button.dataset.index); rememberLearningPlace(); }
   if (action==='category') state.category=button.dataset.value;
   if (action==='learn') {
     const row=rows[state.row];
-    learned.add(row[state.script][state.char]); activity.add(localDate()); saveProgress();
+    learned.add(row[state.script][state.char]); activity.add(localDate());
     if (state.char<row.sounds.length-1) state.char++;
     else {
       const completedRow=state.row;
@@ -658,8 +702,9 @@ app.addEventListener('click', event => {
       else { state.view='progress'; }
       toast(`${rows[completedRow].name} lesson complete. A lovely step forward!`);
     }
+    if (state.view==='lessons') rememberLearningPlace(); else saveProgress();
   }
-  if (action==='open-character') { state.view='lessons'; state.lessonsExpanded=window.innerWidth>700; state.practiceExpanded=false; state.row=Number(button.dataset.row); state.char=Number(button.dataset.index); window.scrollTo({top:0,behavior:'instant'}); }
+  if (action==='open-character') { state.view='lessons'; state.lessonsExpanded=window.innerWidth>700; state.practiceExpanded=false; state.row=Number(button.dataset.row); state.char=Number(button.dataset.index); rememberLearningPlace(); window.scrollTo({top:0,behavior:'instant'}); }
   if (action==='restart') { if (state.practiceMode==='kanji') startKanjiQuiz(); else if (state.practiceMode==='vocabulary') startVocabularyQuiz(); else startQuiz(); }
   if (action==='answer') {
     if (!state.quiz || state.quiz.answer!==null) return;

@@ -92,7 +92,7 @@ FALLBACK_READINGS = {
 EVERYDAY_CUES = (
     "今日", "明日", "毎日", "朝", "昼", "夜", "家", "学校", "友達", "家族", "母", "父", "子ども", "駅", "電車", "バス", "店", "買", "食", "飲", "行", "来", "帰", "見", "聞", "話", "作", "使", "読", "書", "歩", "住", "仕事", "会社", "週末", "料理", "天気", "雨", "旅行", "公園", "病院", "電話", "本", "部屋", "車",
 )
-AVOID_PATTERNS = re.compile(r"つべこべ|あいつ|いかんにかかわらず|いかがわし|聖書|パリサイ|ニコデモ|ひっきりなし|おさらば|いまいまし|なさい|べきだ|たらしい|拷問|処刑|殺人|泥棒|盗人|巧言|令色|少なし|戦争|のであった|上天気|おいでですか|ワックス|もろともせず|ジャブジャブ|たらい|おいそれと|すんでのところ|ポンコツ|グランド・セントラル|男子学生|テクニカルグループ|道草を食う|ホットドッグ|クジラ|オーストラリア|サム|ジョージ|トム|ジョン|マイク|フランク|メアリー|スミス|ブラウン|カール|チャールズ|ベス|アリス|ボブ")
+AVOID_PATTERNS = re.compile(r"つべこべ|あいつ|アイツ|エキセントリック|いかんにかかわらず|いかがわし|聖書|パリサイ|ニコデモ|ひっきりなし|おさらば|いまいまし|なさい|べきだ|たらしい|拷問|処刑|殺人|泥棒|盗人|巧言|令色|少なし|戦争|のであった|上天気|おいでですか|ワックス|もろともせず|ジャブジャブ|たらい|おいそれと|すんでのところ|ポンコツ|グランド・セントラル|男子学生|テクニカルグループ|道草を食う|ホットドッグ|クジラ|オーストラリア|サム|ジョージ|トム|ジョン|マイク|フランク|メアリー|スミス|ブラウン|カール|チャールズ|ベス|アリス|ボブ|売春宿|ばつが悪|見せかけ|ファックス|ビジネスホテル|イギリスのバラ|アメリカ人にとって|食いつき|エジプトでは|立ち食い|カッキリ|スクールカラー|セントラル自動車学校|ちっぽけ|くっきり|たとえ火の中|水増し|スクラップ|一見さん|とるに足らない|わきまえ|ピース作れ|立ちっぱなし|たべきれない|彼の犬は彼|ハーバード|エヴェレスト|フィート|ファンレター|犬は人間の最も親しい|見知らぬ人にほえる|男女を問わず|愛読|口元|ユニコーン|スーツにそんな|気前はよい|ちょいやく")
 KATAKANA_NAMES = re.compile(r"トム|ジョン|マイク|サム|フランク|メアリー|スミス|ブラウン|ジョージ|チャールズ|カール|ベス|アリス|ボブ|イタリア人")
 
 
@@ -119,6 +119,17 @@ def main():
 
     kanjidic = json.loads(args.kanjidic_json.read_text(encoding="utf-8"))
     corpus = json.loads(args.tatoeba_json.read_text(encoding="utf-8"))["sentences"]
+    readings = pykakasi.kakasi()
+    app_source = Path(__file__).resolve().parents[1] / "app.js"
+    vocabulary_source = app_source.read_text(encoding="utf-8").split("const soundHints", 1)[0]
+    vocabulary_readings = set()
+    for word in re.findall(r"jp:'([^']+)'", vocabulary_source):
+        reading = "".join(part["hira"] for part in readings.convert(word))
+        if len(reading) >= 2:
+            vocabulary_readings.add(reading)
+            # Include dictionary stems so inflected everyday verbs and adjectives can match.
+            if reading[-1:] in "うくぐすつぬぶむるい":
+                vocabulary_readings.add(reading[:-1])
     grades = {
         character: current_grade(character, item.get("grade"))
         for character, item in kanjidic.items()
@@ -127,7 +138,6 @@ def main():
     for character in "茨媛岡潟岐熊香佐埼崎滋鹿縄井沖栃奈梨阪阜":
         grades[character] = 4
 
-    readings = pykakasi.kakasi()
     candidates = defaultdict(list)
     for entry in corpus:
         japanese = entry.get("japanese", "").strip()
@@ -149,8 +159,9 @@ def main():
             # Prefer concise, complete sentences with fewer kanji beyond the learner's grade.
             length_cost = abs(len(japanese) - 22)
             everyday_bonus = min(sum(cue in japanese for cue in EVERYDAY_CUES), 3) * 8
+            vocabulary_bonus = min(sum(word in kana for word in vocabulary_readings), 2) * 14
             name_cost = 18 if KATAKANA_NAMES.search(japanese) else 0
-            score = later_kanji * 18 + length_cost + max(0, len(japanese) - 34) * 2 + name_cost - everyday_bonus
+            score = later_kanji * 18 + length_cost + max(0, len(japanese) - 34) * 2 + name_cost - everyday_bonus - vocabulary_bonus
             candidates[character].append((score, japanese, kana, english, entry["id"]))
 
     output = {}
@@ -184,8 +195,10 @@ def main():
         newline="\n",
     )
     counts = Counter(grades.values())
+    vocabulary_examples = sum(any(word in reading for word in vocabulary_readings) for values in output.values() for _, reading, _, _ in values)
     print("Kanji targets:", len(output), "grade totals:", dict(sorted(counts.items())))
     print("Characters with fewer than five corpus examples:", len(shortages))
+    print("Examples matching app vocabulary:", vocabulary_examples, "of", sum(map(len, output.values())))
     print("Shortage sample:", [(ch.encode("unicode_escape").decode(), n) for ch, n in shortages[:30]])
 
 

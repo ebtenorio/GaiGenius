@@ -8,8 +8,9 @@ A free, account-free introduction to Japanese. Open `index.html` in a modern bro
 - Character sounds, romanization, and short pronunciation notes.
 - Animated stroke order for all 92 kana, with play/pause, replay, and numbered writing steps. Reduced-motion preferences use static steps instead of animation.
 - 300 Japanese vocabulary entries across hiragana and katakana, with romaji, English meanings, search, and category filters. Includes 50 adjectives and 50 verbs in hiragana.
+- Homepage learning path with a Continue learning button that reopens the last lesson, script, row, or practice mode on that device.
 - Particle guide covering common particles and their roles, with five vocabulary-based example sentences per particle. Reading and English translations are revealed on demand.
-- Kanji section with all 1,026 school-assigned characters across Grades 1–6, English meanings, common on’yomi in katakana, kun’yomi in hiragana, and five sentence examples per kanji.
+- Kanji section with all 1,026 school-assigned characters across Grades 1–6, English meanings, common on’yomi in katakana, kun’yomi in hiragana, and five sentence examples per kanji. Example selection favors beginner-readable sentences and words already introduced in the app.
 - Character-recognition quizzes with feedback and session results. Each round randomly samples ten characters from the selected kana script.
 - Practice modes for randomized kana identification and sentence translation, with readings and translations revealed on demand and no translation score.
 - Progress and learning streaks saved on the current browser and device with localStorage. Clearing browser data removes progress. Private browsing may not retain it.
