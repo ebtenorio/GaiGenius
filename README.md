@@ -9,7 +9,7 @@ A free, account-free introduction to Japanese. Open `index.html` in a modern bro
 - Animated stroke order for all 92 kana, with play/pause, replay, and numbered writing steps. Reduced-motion preferences use static steps instead of animation.
 - 300 Japanese vocabulary entries across hiragana and katakana, with romaji, English meanings, search, and category filters. Includes 50 adjectives and 50 verbs in hiragana.
 - Particle guide covering common particles and their roles, with five vocabulary-based example sentences per particle. Reading and English translations are revealed on demand.
-- Kanji section with all 80 Grade 1 and 160 Grade 2 characters, English meanings, and common readings in kana only.
+- Kanji section with all 1,026 school-assigned characters across Grades 1–6, English meanings, common on’yomi in katakana, and kun’yomi in hiragana.
 - Character-recognition quizzes with feedback and session results. Each round randomly samples ten characters from the selected kana script.
 - Practice modes for randomized kana identification and sentence translation, with readings and translations revealed on demand and no translation score.
 - Progress and learning streaks saved on the current browser and device with localStorage. Clearing browser data removes progress. Private browsing may not retain it.
@@ -23,7 +23,7 @@ The core app works offline after the files are downloaded. Google Fonts and the 
 - `index.html`: document, metadata, fonts, and entry point.
 - `styles.css`: responsive layout and presentation.
 - `app.js`: lesson and vocabulary data, rendering, practice, speech, and local progress.
-- `kanji-data.js`: Grade 1 and Grade 2 kanji, meanings, and kana readings.
+- `kanji-data.js`: Grade 1–6 kanji, meanings, and kana readings.
 - `writing.js`: numbered writing guides and stroke playback.
 - `vendor/lucide.min.js`: pinned Lucide 0.468.0 icons (ISC license, included in the library).
 - `vendor/kana-strokes.js`: locally bundled ordered stroke paths and number positions.
@@ -33,8 +33,8 @@ The core app works offline after the files are downloaded. Google Fonts and the 
 
 The kana stroke paths and number positions are adapted from [KanjiVG](https://kanjivg.tagaini.net/), copyright Ulrich Apel, and distributed under [Creative Commons Attribution-ShareAlike 3.0](https://creativecommons.org/licenses/by-sa/3.0/). The adaptation extracts the ordered paths and number transforms from the original SVGs into JavaScript data. The source revision is recorded in `vendor/kana-strokes.js`; the original notice is retained in `vendor/KANJIVG-LICENSE.txt`. These data-license terms apply to the adapted stroke data.
 
-The current curriculum covers basic kana and Grade 1 and Grade 2 kanji. Dakuten, handakuten, combined sounds, handwriting practice, and higher-grade kanji are potential future lessons. Vocabulary may include these additional sounds and includes a note to distinguish them from the basic character set.
+The current curriculum covers basic kana and all six elementary school kanji grades: Grade 1 (80), Grade 2 (160), Grade 3 (200), Grade 4 (202), Grade 5 (193), and Grade 6 (191). Dakuten, handakuten, combined sounds, and handwriting practice remain potential future lessons. Vocabulary may include these additional sounds and includes a note to distinguish them from the basic character set.
 
-The Grade 1 and Grade 2 kanji sets follow the [MEXT grade-by-grade allocation table](https://www.mext.go.jp/a_menu/shotou/cs/1320015.htm). Common readings are curated from a [Grade 1 reading list](https://family-life.work/study/sho/resources/pdf/kanji/kanjiList-sho1.pdf) and a [Grade 2 reading list](https://minkan.co.jp/others/ps2/). On’yomi readings are shown in katakana and kun’yomi readings in hiragana; these are common readings, not an exhaustive list.
+Kanji grade allocations follow the current [MEXT curriculum allocation](https://www.mext.go.jp/content/1384661_4_1_1.pdf). Meanings and readings for Grades 3–6 are derived from [KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC2), copyright Electronic Dictionary Research and Development Group (EDRDG), under the [EDRDG licence](https://www.edrdg.org/edrdg/licence.html). Grade 1–2 common readings retain the existing curated sources: a [Grade 1 reading list](https://family-life.work/study/sho/resources/pdf/kanji/kanjiList-sho1.pdf) and a [Grade 2 reading list](https://minkan.co.jp/others/ps2/). On’yomi readings are shown in katakana and kun’yomi readings in hiragana; these are common readings, not an exhaustive list.
 
 To publish, upload `index.html`, `styles.css`, `app.js`, `writing.js`, `kanji-data.js`, and the `vendor` directory to any static web host, such as GitHub Pages, Netlify, or Cloudflare Pages. The importer script is not needed at runtime.
