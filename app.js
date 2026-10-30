@@ -250,6 +250,7 @@ let saved = {};
 try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch { saved = {}; }
 const learned = new Set(Array.isArray(saved.learned) ? saved.learned.filter(value => typeof value === 'string') : []);
 const activity = new Set(Array.isArray(saved.activity) ? saved.activity.filter(value => typeof value === 'string') : []);
+const reviewCards = saved.reviewCards && typeof saved.reviewCards==='object' && !Array.isArray(saved.reviewCards) ? saved.reviewCards : {};
 const resumeViews=['lessons','vocabulary','particles','kanji','practice'];
 const savedResume=(()=>{
   const resume=saved.resume;
@@ -257,18 +258,18 @@ const savedResume=(()=>{
   const script=resume.script==='kata'?'kata':'hira';
   const row=Number.isInteger(resume.row)?Math.max(0,Math.min(rows.length-1,resume.row)):0;
   const char=Number.isInteger(resume.char)?Math.max(0,Math.min(rows[row].sounds.length-1,resume.char)):0;
-  const practiceMode=['characters','vocabulary','sentences','kanji'].includes(resume.practiceMode)?resume.practiceMode:'characters';
+  const practiceMode=['characters','vocabulary','sentences','kanji','review','builder'].includes(resume.practiceMode)?resume.practiceMode:'characters';
   const practiceKanjiGrade=Number.isInteger(resume.practiceKanjiGrade)&&resume.practiceKanjiGrade>=1&&resume.practiceKanjiGrade<=6?resume.practiceKanjiGrade:1;
   const kanjiGrade=Number.isInteger(resume.kanjiGrade)&&resume.kanjiGrade>=1&&resume.kanjiGrade<=6?resume.kanjiGrade:1;
   return {view:resume.view,script,row,char,practiceMode,practiceKanjiGrade,kanjiGrade};
 })();
-const state = {view:'home',lessonsExpanded:window.innerWidth>700,practiceExpanded:false,script:savedResume?.script||'hira',row:savedResume?.row||0,char:savedResume?.char||0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:savedResume?.practiceMode||'characters',practiceKanjiGrade:savedResume?.practiceKanjiGrade||1,kanjiReadingsRevealed:false,vocabularyReadingRevealed:false,sentenceQueue:[],sentenceIndex:0,translationRevealed:false,kanjiGrade:savedResume?.kanjiGrade||1,kanjiSearch:'',resume:savedResume};
+const state = {view:'home',lessonsExpanded:window.innerWidth>700,practiceExpanded:false,script:savedResume?.script||'hira',row:savedResume?.row||0,char:savedResume?.char||0,category:'All',search:'',quiz:null,quizzes:Number.isFinite(saved.quizzes) ? saved.quizzes : 0,practiceMode:savedResume?.practiceMode||'characters',practiceKanjiGrade:savedResume?.practiceKanjiGrade||1,kanjiReadingsRevealed:false,vocabularyReadingRevealed:false,sentenceQueue:[],sentenceIndex:0,translationRevealed:false,builderQueue:[],builderIndex:0,builderSelected:[],builderOrder:[],builderChecked:null,kanjiGrade:savedResume?.kanjiGrade||1,kanjiSearch:'',resume:savedResume};
 const app = document.querySelector('#app');
 let strokePlayer = null;
 const scriptName = () => state.script === 'hira' ? 'Hiragana' : 'Katakana';
 const localDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 function saveProgress() {
-  try { localStorage.setItem(storageKey, JSON.stringify({learned:[...learned],activity:[...activity],quizzes:state.quizzes,resume:state.resume})); }
+  try { localStorage.setItem(storageKey, JSON.stringify({learned:[...learned],activity:[...activity],quizzes:state.quizzes,resume:state.resume,reviewCards})); }
   catch { toast('Browser storage is unavailable. Progress will last for this visit.'); }
 }
 function rememberLearningPlace() {
@@ -279,7 +280,7 @@ function rememberLearningPlace() {
 function resumeDescription() {
   if (!state.resume) return 'Start with Hiragana';
   if (state.resume.view==='lessons') return `${state.resume.script==='hira'?'Hiragana':'Katakana'} · ${rows[state.resume.row].name}`;
-  if (state.resume.view==='practice') return ({characters:'Kana identification practice',vocabulary:'Vocabulary practice',sentences:'Sentence translation practice',kanji:`Kanji recognition · Grade ${state.resume.practiceKanjiGrade}`})[state.resume.practiceMode];
+  if (state.resume.view==='practice') return ({characters:'Kana identification practice',vocabulary:'Vocabulary practice',sentences:'Sentence translation practice',kanji:`Kanji recognition · Grade ${state.resume.practiceKanjiGrade}`,review:'Spaced review',builder:'Sentence building'})[state.resume.practiceMode];
   return ({vocabulary:'Vocabulary lesson',particles:'Particles lesson',kanji:`Kanji lesson · Grade ${state.resume.kanjiGrade}`})[state.resume.view];
 }
 function streak() {
@@ -294,6 +295,20 @@ const countLearned = () => characters().filter(item => learned.has(item.characte
 const escapeText = text => String(text).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 function renderHome() {
   return `<section class="home-view"><p class="greeting">ようこそ / Welcome</p><div class="home-hero"><div><span class="eyebrow">A LITTLE JAPANESE, EVERY DAY</span><h1>Start with the sounds.<br>Build toward real sentences.</h1><p>GaiGenius is a simple, self-paced path through Japanese writing, everyday words, and sentence building. Learn a little at a time, then use Practice to check what you remember.</p><p class="resume-hint">${escapeText(resumeDescription())}</p><button class="primary-button" data-action="continue-learning">Continue learning ${icon('arrow')}</button></div><div class="home-hero-mark" lang="ja" aria-hidden="true">あ<br>ア</div></div><div class="section-title home-section-heading"><h2>A suggested learning order</h2><span class="muted">You can revisit any lesson whenever you like.</span></div><div class="learning-path"><article class="path-step"><span class="path-number">01</span><div><span class="eyebrow">LESSONS · START HERE</span><h3>Kana: Hiragana, then Katakana</h3><p>Learn the basic sounds and characters first. Follow the bite-sized rows and use the stroke guides to see how each character is written.</p><button class="text-button" data-action="view" data-value="lessons">Open Kana lessons ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">02</span><div><span class="eyebrow">LESSONS</span><h3>Everyday vocabulary</h3><p>Build a useful base of common words, including food, places, adjectives, and verbs.</p><button class="text-button" data-action="view" data-value="vocabulary">Explore Vocabulary ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">03</span><div><span class="eyebrow">LESSONS</span><h3>Particles</h3><p>See how particles such as は, が, を, に, and で connect words and show their roles in a sentence.</p><button class="text-button" data-action="view" data-value="particles">Explore Particles ${icon('arrow')}</button></div></article><article class="path-step"><span class="path-number">04</span><div><span class="eyebrow">LESSONS</span><h3>Kanji, Grade 1 through Grade 6</h3><p>Meet the school-grade kanji with their meanings, kana readings, and sentence examples.</p><button class="text-button" data-action="view" data-value="kanji">Explore Kanji ${icon('arrow')}</button></div></article></div><section class="home-practice"><div class="section-title"><div><span class="eyebrow">PRACTICE · USE IT AS YOU LEARN</span><h2>Short practice for each step</h2></div><p class="muted">Try a matching practice after each lesson. Translation practice lets you reveal the answer when you’re ready.</p></div><div class="home-practice-grid"><button class="home-practice-card" data-action="practice-mode" data-value="characters"><span class="home-practice-symbol" lang="ja">あ ア</span><strong>Hiragana / Katakana</strong><span>Identify a random kana character.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="vocabulary"><span class="home-practice-symbol" lang="ja">ことば</span><strong>Vocabulary</strong><span>Choose the meaning of a word in kana.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="sentences"><span class="home-practice-symbol" lang="ja">文</span><strong>Simple Sentence Translation</strong><span>Try a sentence, then reveal its reading and translation.</span>${icon('arrow')}</button><button class="home-practice-card" data-action="practice-mode" data-value="kanji"><span class="home-practice-symbol" lang="ja">漢字</span><strong>Kanji Recognition by Grade</strong><span>Practice recognizing kanji from a selected grade.</span>${icon('arrow')}</button></div></section><p class="home-note">Suggested path: Kana → Vocabulary → Particles → Kanji. Practice alongside each lesson and move at your own pace.</p></section>`;
+}
+function mountAdditionalPracticeOptions() {
+  const options=[
+    {mode:'review',label:'Spaced Review',description:'Review due or missed kana, vocabulary, and kanji.',symbol:'復習'},
+    {mode:'builder',label:'Sentence Building',description:'Arrange familiar words and particles into sentences.',symbol:'文'},
+  ];
+  const submenu=app.querySelector('#practice-submenu');
+  if (submenu) submenu.insertAdjacentHTML('beforeend',options.map(({mode,label})=>
+    `<button class="nav-sub-button ${state.view==='practice'&&state.practiceMode===mode?'active':''}" type="button" data-action="practice-mode" data-value="${mode}" ${state.view==='practice'&&state.practiceMode===mode?'aria-current="page"':''}>${label}</button>`
+  ).join(''));
+  const homeGrid=app.querySelector('.home-practice-grid');
+  if (homeGrid) homeGrid.insertAdjacentHTML('beforeend',options.map(({mode,label,description,symbol})=>
+    `<button class="home-practice-card" data-action="practice-mode" data-value="${mode}"><span class="home-practice-symbol" lang="ja">${symbol}</span><strong>${label}</strong><span>${description}</span>${icon('arrow')}</button>`
+  ).join(''));
 }
 function scriptTabs() {
   return `<div class="script-tabs" role="group" aria-label="Japanese script">${['hira','kata'].map(script => `<button class="script-tab ${state.script===script?'active':''}" data-action="script" data-value="${script}" aria-pressed="${state.script===script}">${script==='hira'?'Hiragana':'Katakana'}</button>`).join('')}</div>`;
@@ -311,6 +326,7 @@ function render() {
     <div class="sidebar-foot">${icon('shield')} Free to learn. Always.</div>
     </aside><div class="shell"><header class="topbar"><div class="breadcrumb">Your learning space ${icon('chevron')} <strong>${titles[state.view]}</strong></div><a class="brand mobile-brand" href="#" data-action="home" aria-label="GaiGenius home"><span class="brand-mark" lang="ja">が</span><span>Gai<span class="accent">Genius</span></span></a><div class="topbar-right"><span class="streak" title="Consecutive days of learning">${icon('flame')} ${streak()} day${streak()===1?'':'s'}</span><span class="guest" title="Learning without an account" aria-label="Guest learner">${icon('user')}</span></div></header>
     <main class="main" id="main-content"><div class="fade-in">${state.view==='home'?renderHome():state.view==='lessons'?renderLessons():state.view==='vocabulary'?renderVocabulary():state.view==='particles'?renderParticles():state.view==='kanji'?renderKanji():state.view==='practice'?renderPractice():renderProgress()}</div><footer class="footer"><span>A little progress, every day. You're on your way.</span><span class="jp" lang="ja">楽しんで学ぼう <span lang="en">/ Enjoy the journey</span></span></footer></main></div>`;
+  mountAdditionalPracticeOptions();
   lucide.createIcons({attrs:{'stroke-width':1.7}});
   strokePlayer = mountStrokeGuide();
 }
@@ -511,6 +527,108 @@ particleLessons.forEach(particle => {
   const additionalExamples = moreParticleExamples[particle.jp].map(([jp,romaji,meaning,words]) => ({jp,romaji,meaning,words}));
   particle.examples = [firstExample,...additionalExamples];
 });
+const sentenceBuildingCards = [
+  {parts:['ねこ','は','かわいい','です'],romaji:'Neko wa kawaii desu.',meaning:'Cats are cute.'},
+  {parts:['りんご','が','すき','です'],romaji:'Ringo ga suki desu.',meaning:'I like apples.'},
+  {parts:['すし','を','たべます'],romaji:'Sushi o tabemasu.',meaning:'I eat sushi.'},
+  {parts:['わたし','も','おちゃ','を','のみます'],romaji:'Watashi mo ocha o nomimasu.',meaning:'I drink tea too.'},
+  {parts:['うち','に','かえります'],romaji:'Uchi ni kaerimasu.',meaning:'I am going home.'},
+  {parts:['レストラン','で','たべます'],romaji:'Resutoran de tabemasu.',meaning:'I eat at a restaurant.'},
+  {parts:['えき','へ','いきます'],romaji:'Eki e ikimasu.',meaning:'I am going to the station.'},
+  {parts:['ともだち','と','すし','を','たべます'],romaji:'Tomodachi to sushi o tabemasu.',meaning:'I eat sushi with a friend.'},
+  {parts:['パン','や','チーズ','を','かいます'],romaji:'Pan ya chīzu o kaimasu.',meaning:'I buy bread, cheese, and things like that.'},
+  {parts:['うち','から','えき','まで','あるきます'],romaji:'Uchi kara eki made arukimasu.',meaning:'I walk from home to the station.'},
+  {parts:['みず','は','つめたい','です','ね'],romaji:'Mizu wa tsumetai desu ne.',meaning:'The water is cold, isn’t it?'},
+  {parts:['りんご','より','バナナ','が','あまい','です'],romaji:'Ringo yori banana ga amai desu.',meaning:'Bananas are sweeter than apples.'},
+  {parts:['すし','だけ','たべます'],romaji:'Sushi dake tabemasu.',meaning:'I eat only sushi.'},
+  {parts:['ねこ','しか','いません'],romaji:'Neko shika imasen.',meaning:'There is nothing but a cat.'},
+  {parts:['カレー','は','からい','です','よ'],romaji:'Karē wa karai desu yo.',meaning:'Curry is spicy.'},
+  {parts:['おちゃ','を','のみます','か'],romaji:'Ocha o nomimasu ka?',meaning:'Would you like some tea?'},
+  {parts:['さかな','を','かいます'],romaji:'Sakana o kaimasu.',meaning:'I buy fish.'},
+  {parts:['はな','を','みます'],romaji:'Hana o mimasu.',meaning:'I look at the flowers.'},
+  {parts:['わたし','は','まいあさ','コーヒー','を','のみます'],romaji:'Watashi wa maiasa kōhī o nomimasu.',meaning:'I drink coffee every morning.'},
+  {parts:['あさ','に','パン','を','たべます'],romaji:'Asa ni pan o tabemasu.',meaning:'I eat bread in the morning.'},
+  {parts:['ひる','に','ともだち','と','すし','を','たべます'],romaji:'Hiru ni tomodachi to sushi o tabemasu.',meaning:'I eat sushi with a friend at noon.'},
+  {parts:['よる','に','おちゃ','を','のみます'],romaji:'Yoru ni ocha o nomimasu.',meaning:'I drink tea in the evening.'},
+  {parts:['きょう','は','あめ','です'],romaji:'Kyō wa ame desu.',meaning:'It is rainy today.'},
+  {parts:['あした','は','はれ','です'],romaji:'Ashita wa hare desu.',meaning:'It will be sunny tomorrow.'},
+  {parts:['そら','が','あおい','です'],romaji:'Sora ga aoi desu.',meaning:'The sky is blue.'},
+  {parts:['はな','が','きれい','です'],romaji:'Hana ga kirei desu.',meaning:'The flowers are beautiful.'},
+  {parts:['この','みせ','は','おいしい','です'],romaji:'Kono mise wa oishii desu.',meaning:'The food at this shop is delicious.'},
+  {parts:['この','すし','は','おいしい','です'],romaji:'Kono sushi wa oishii desu.',meaning:'This sushi is delicious.'},
+  {parts:['コーヒー','は','あつい','です'],romaji:'Kōhī wa atsui desu.',meaning:'The coffee is hot.'},
+  {parts:['みず','を','ください'],romaji:'Mizu o kudasai.',meaning:'Water, please.'},
+  {parts:['メニュー','を','みせて','ください'],romaji:'Menyū o misete kudasai.',meaning:'Please show me the menu.'},
+  {parts:['これ','は','いくら','です','か'],romaji:'Kore wa ikura desu ka?',meaning:'How much is this?'},
+  {parts:['パン','を','ふたつ','ください'],romaji:'Pan o futatsu kudasai.',meaning:'Two breads, please.'},
+  {parts:['コンビニ','で','おちゃ','を','かいます'],romaji:'Konbini de ocha o kaimasu.',meaning:'I buy tea at the convenience store.'},
+  {parts:['スーパー','で','やさい','を','かいます'],romaji:'Sūpā de yasai o kaimasu.',meaning:'I buy vegetables at the supermarket.'},
+  {parts:['みせ','で','パン','を','かいました'],romaji:'Mise de pan o kaimashita.',meaning:'I bought bread at the shop.'},
+  {parts:['えき','で','ともだち','に','あいます'],romaji:'Eki de tomodachi ni aimasu.',meaning:'I meet my friend at the station.'},
+  {parts:['バス','で','がっこう','へ','いきます'],romaji:'Basu de gakkō e ikimasu.',meaning:'I go to school by bus.'},
+  {parts:['タクシー','で','ホテル','へ','いきます'],romaji:'Takushī de hoteru e ikimasu.',meaning:'I go to the hotel by taxi.'},
+  {parts:['うち','から','えき','まで','バス','で','いきます'],romaji:'Uchi kara eki made basu de ikimasu.',meaning:'I go from home to the station by bus.'},
+  {parts:['ともだち','は','あるいて','きます'],romaji:'Tomodachi wa aruite kimasu.',meaning:'My friend comes on foot.'},
+  {parts:['いぬ','と','こうえん','を','あるきます'],romaji:'Inu to kōen o arukimasu.',meaning:'I walk through the park with my dog.'},
+  {parts:['こうえん','で','ねこ','を','みました'],romaji:'Kōen de neko o mimashita.',meaning:'I saw a cat in the park.'},
+  {parts:['にわ','に','はな','が','あります'],romaji:'Niwa ni hana ga arimasu.',meaning:'There are flowers in the garden.'},
+  {parts:['へや','に','つくえ','が','あります'],romaji:'Heya ni tsukue ga arimasu.',meaning:'There is a desk in the room.'},
+  {parts:['つくえ','の','うえ','に','ほん','が','あります'],romaji:'Tsukue no ue ni hon ga arimasu.',meaning:'There is a book on the desk.'},
+  {parts:['かばん','の','なか','に','かぎ','が','あります'],romaji:'Kaban no naka ni kagi ga arimasu.',meaning:'There is a key in the bag.'},
+  {parts:['ねこ','は','いす','の','した','に','います'],romaji:'Neko wa isu no shita ni imasu.',meaning:'The cat is under the chair.'},
+  {parts:['いぬ','は','そと','に','います'],romaji:'Inu wa soto ni imasu.',meaning:'The dog is outside.'},
+  {parts:['ここ','に','すわって','ください'],romaji:'Koko ni suwatte kudasai.',meaning:'Please sit here.'},
+  {parts:['まど','を','あけて','ください'],romaji:'Mado o akete kudasai.',meaning:'Please open the window.'},
+  {parts:['ドア','を','しめて','ください'],romaji:'Doa o shimete kudasai.',meaning:'Please close the door.'},
+  {parts:['でんき','を','つけます'],romaji:'Denki o tsukemasu.',meaning:'I turn on the light.'},
+  {parts:['テレビ','を','みます'],romaji:'Terebi o mimasu.',meaning:'I watch TV.'},
+  {parts:['おんがく','を','ききます'],romaji:'Ongaku o kikimasu.',meaning:'I listen to music.'},
+  {parts:['うち','で','ほん','を','よみます'],romaji:'Uchi de hon o yomimasu.',meaning:'I read a book at home.'},
+  {parts:['ともだち','に','てがみ','を','かきます'],romaji:'Tomodachi ni tegami o kakimasu.',meaning:'I write a letter to my friend.'},
+  {parts:['かぞく','と','ばんごはん','を','たべます'],romaji:'Kazoku to bangohan o tabemasu.',meaning:'I eat dinner with my family.'},
+  {parts:['はは','は','さかな','を','りょうりします'],romaji:'Haha wa sakana o ryōri shimasu.',meaning:'My mother cooks fish.'},
+  {parts:['ちち','は','コーヒー','が','すき','です'],romaji:'Chichi wa kōhī ga suki desu.',meaning:'My father likes coffee.'},
+  {parts:['いもうと','は','アイス','が','だいすき','です'],romaji:'Imōto wa aisu ga daisuki desu.',meaning:'My younger sister loves ice cream.'},
+  {parts:['あに','は','くるま','で','しごと','へ','いきます'],romaji:'Ani wa kuruma de shigoto e ikimasu.',meaning:'My older brother goes to work by car.'},
+  {parts:['ともだち','の','なまえ','は','ゆき','です'],romaji:'Tomodachi no namae wa Yuki desu.',meaning:'My friend’s name is Yuki.'},
+  {parts:['わたし','の','かぞく','は','よにん','です'],romaji:'Watashi no kazoku wa yonin desu.',meaning:'There are four people in my family.'},
+  {parts:['こども','は','こうえん','で','あそびます'],romaji:'Kodomo wa kōen de asobimasu.',meaning:'The child plays in the park.'},
+  {parts:['こども','たち','が','うた','を','うたいます'],romaji:'Kodomotachi ga uta o utaimasu.',meaning:'The children sing a song.'},
+  {parts:['わたし','は','にほんご','を','べんきょうします'],romaji:'Watashi wa nihongo o benkyō shimasu.',meaning:'I study Japanese.'},
+  {parts:['まいにち','ひらがな','を','れんしゅうします'],romaji:'Mainichi hiragana o renshū shimasu.',meaning:'I practice hiragana every day.'},
+  {parts:['きょう','は','にほんご','の','クラス','が','あります'],romaji:'Kyō wa nihongo no kurasu ga arimasu.',meaning:'I have Japanese class today.'},
+  {parts:['せんせい','に','しつもん','を','します'],romaji:'Sensei ni shitsumon o shimasu.',meaning:'I ask the teacher a question.'},
+  {parts:['この','ことば','の','いみ','は','なん','です','か'],romaji:'Kono kotoba no imi wa nan desu ka?',meaning:'What does this word mean?'},
+  {parts:['もう','いちど','いって','ください'],romaji:'Mō ichido itte kudasai.',meaning:'Please say that one more time.'},
+  {parts:['ゆっくり','はなして','ください'],romaji:'Yukkuri hanashite kudasai.',meaning:'Please speak slowly.'},
+  {parts:['わたし','も','そう','おもいます'],romaji:'Watashi mo sō omoimasu.',meaning:'I think so too.'},
+  {parts:['これは','わたし','の','かさ','です'],romaji:'Kore wa watashi no kasa desu.',meaning:'This is my umbrella.'},
+  {parts:['その','かばん','は','だれ','の','です','か'],romaji:'Sono kaban wa dare no desu ka?',meaning:'Whose bag is that?'},
+  {parts:['あの','ホテル','は','あたらしい','です'],romaji:'Ano hoteru wa atarashii desu.',meaning:'That hotel over there is new.'},
+  {parts:['この','へや','は','しずか','です'],romaji:'Kono heya wa shizuka desu.',meaning:'This room is quiet.'},
+  {parts:['この','みち','は','ながい','です'],romaji:'Kono michi wa nagai desu.',meaning:'This road is long.'},
+  {parts:['きょう','は','とても','さむい','です'],romaji:'Kyō wa totemo samui desu.',meaning:'It is very cold today.'},
+  {parts:['なつ','は','あつい','です','ね'],romaji:'Natsu wa atsui desu ne.',meaning:'Summer is hot, isn’t it?'},
+  {parts:['ふゆ','に','ゆき','が','ふります'],romaji:'Fuyu ni yuki ga furimasu.',meaning:'It snows in winter.'},
+  {parts:['あき','は','やま','が','きれい','です'],romaji:'Aki wa yama ga kirei desu.',meaning:'The mountains are beautiful in autumn.'},
+  {parts:['はる','に','さくら','が','さきます'],romaji:'Haru ni sakura ga sakimasu.',meaning:'Cherry blossoms bloom in spring.'},
+  {parts:['きょう','は','かぜ','が','つよい','です'],romaji:'Kyō wa kaze ga tsuyoi desu.',meaning:'The wind is strong today.'},
+  {parts:['つき','が','きれい','です','ね'],romaji:'Tsuki ga kirei desu ne.',meaning:'The moon is beautiful, isn’t it?'},
+  {parts:['よる','に','ほし','を','みます'],romaji:'Yoru ni hoshi o mimasu.',meaning:'I look at the stars at night.'},
+  {parts:['うみ','で','およぎます'],romaji:'Umi de oyogimasu.',meaning:'I swim in the sea.'},
+  {parts:['やま','に','のぼります'],romaji:'Yama ni noborimasu.',meaning:'I climb the mountain.'},
+  {parts:['ふね','で','しま','へ','いきます'],romaji:'Fune de shima e ikimasu.',meaning:'I go to the island by boat.'},
+  {parts:['ちず','を','みて','ください'],romaji:'Chizu o mite kudasai.',meaning:'Please look at the map.'},
+  {parts:['しゃしん','を','とって','も','いい','です','か'],romaji:'Shashin o totte mo ii desu ka?',meaning:'May I take a picture?'},
+  {parts:['カメラ','を','もって','きました'],romaji:'Kamera o motte kimashita.',meaning:'I brought my camera.'},
+  {parts:['きっぷ','を','かいました'],romaji:'Kippu o kaimashita.',meaning:'I bought a ticket.'},
+  {parts:['でんしゃ','は','なんじ','に','きます','か'],romaji:'Densha wa nanji ni kimasu ka?',meaning:'What time does the train come?'},
+  {parts:['バス','が','もうすぐ','きます'],romaji:'Basu ga mō sugu kimasu.',meaning:'The bus will be here soon.'},
+  {parts:['えき','の','まえ','で','まちます'],romaji:'Eki no mae de machimasu.',meaning:'I will wait in front of the station.'},
+  {parts:['ホテル','に','チェックインします'],romaji:'Hoteru ni chekkuin shimasu.',meaning:'I check in at the hotel.'},
+  {parts:['トイレ','は','どこ','です','か'],romaji:'Toire wa doko desu ka?',meaning:'Where is the restroom?'},
+  {parts:['おちゃ','と','コーヒー','と','どちら','が','いい','です','か'],romaji:'Ocha to kōhī to dochira ga ii desu ka?',meaning:'Which would you prefer, tea or coffee?'},
+];
 function renderParticles() {
   return `<p class="greeting">じょし / Small words, important work</p><div class="page-head"><div><h1>Particles connect the pieces.</h1><p>A particle follows a word or phrase and shows how it works in the sentence.</p></div></div><div class="particle-note"><strong>A helpful starting point</strong><p>Particles do not map neatly to one English word. Learn the job each one does in its sentence. A few are pronounced differently from their usual kana sound: は as a particle is wa, へ is e, and を is usually o.</p></div><div class="particle-grid">${particleLessons.map(particle => `<article class="particle-card"><div class="particle-card-head"><span class="particle-symbol" lang="ja">${particle.jp}</span><div><span class="particle-sound">${particle.sound}</span><h2>${particle.name}</h2></div></div><p class="particle-description">${particle.description}</p><button class="particle-open-examples" type="button" data-action="particle-examples" data-value="${particle.jp}" aria-label="View five example sentences for ${particle.jp}, ${particle.name}">View 5 examples ${icon('arrow')}</button></article>`).join('')}</div><dialog class="particle-dialog" id="particle-dialog" aria-labelledby="particle-dialog-title"><div class="particle-dialog-head"><div><span class="eyebrow">PARTICLE EXAMPLES</span><h2 id="particle-dialog-title"></h2></div><form method="dialog"><button class="particle-dialog-close" aria-label="Close examples">Close</button></form></div><div class="particle-dialog-content" id="particle-dialog-content"></div></dialog>`;
 }
@@ -553,7 +671,80 @@ function startVocabularyQuiz() {
   state.quiz={type:'vocabulary',questions,index:0,score:0,answer:null};
   state.vocabularyReadingRevealed=false;
 }
+function reviewSources() {
+  const kana=['hira','kata'].flatMap(script=>rows.flatMap((row,rowIndex)=>[...row[script]].map((character,index)=>({
+    key:`kana|${script}|${character}`,kind:'kana',script,character,sound:row.sounds[index],
+  }))));
+  const words=[...new Map(vocabulary.map(word=>[word.en,word])).values()].map(word=>({
+    key:`vocabulary|${word.jp}|${word.en}`,kind:'vocabulary',character:word.jp,reading:word.romaji,meaning:word.en,
+  }));
+  const kanji=[1,2,3,4,5,6].flatMap(grade=>(window.kanjiData[grade]||[]).map(([character,meaning])=>({
+    key:`kanji|${grade}|${character}`,kind:'kanji',grade,character,meaning,
+  })));
+  return {kana,words,kanji};
+}
+function addReviewOptions(question,sources) {
+  if (question.kind==='kana') {
+    const distractors=shuffle([...new Set(sources.kana.filter(item=>item.sound!==question.sound).map(item=>item.sound))]).slice(0,3);
+    question.options=shuffle([question.sound,...distractors]);
+  } else if (question.kind==='vocabulary') {
+    const distractors=shuffle(sources.words.filter(item=>item.meaning!==question.meaning)).slice(0,3).map(item=>item.meaning);
+    question.options=shuffle([question.meaning,...distractors]);
+  } else {
+    const sameGrade=sources.kanji.filter(item=>item.grade===question.grade&&item.meaning!==question.meaning);
+    const distractors=shuffle([...new Set(sameGrade.map(item=>item.meaning))]).slice(0,3);
+    question.options=shuffle([question.meaning,...distractors]);
+  }
+  return question;
+}
+function startReviewQuiz() {
+  const sources=reviewSources();
+  const all=[...sources.kana,...sources.words,...sources.kanji];
+  const now=Date.now();
+  const due=all.filter(item=>reviewCards[item.key]&&Number(reviewCards[item.key].dueAt)<=now)
+    .sort((a,b)=>Number(reviewCards[a.key].dueAt)-Number(reviewCards[b.key].dueAt));
+  const questions=due.slice(0,10);
+  const groups=[
+    shuffle(sources.kana.filter(item=>!reviewCards[item.key])),
+    shuffle(sources.words.filter(item=>!reviewCards[item.key])),
+    shuffle(sources.kanji.filter(item=>item.grade===state.practiceKanjiGrade&&!reviewCards[item.key])),
+  ];
+  while (questions.length<10&&groups.some(group=>group.length)) {
+    for (const group of groups) {
+      if (questions.length>=10) break;
+      if (group.length) questions.push(group.pop());
+    }
+  }
+  if (questions.length<10) {
+    const future=all.filter(item=>reviewCards[item.key]&&Number(reviewCards[item.key].dueAt)>now)
+      .sort((a,b)=>Number(reviewCards[a.key].dueAt)-Number(reviewCards[b.key].dueAt));
+    questions.push(...future.slice(0,10-questions.length));
+  }
+  state.quiz={type:'review',questions:questions.map(question=>addReviewOptions(question,sources)),index:0,score:0,answer:null};
+  state.kanjiReadingsRevealed=false;
+  state.vocabularyReadingRevealed=false;
+}
+function rememberReviewAnswer(quiz,question,correct) {
+  const kind=quiz.type==='review'?question.kind:quiz.type==='kana'?'kana':quiz.type;
+  const grade=quiz.type==='review'?question.grade:quiz.grade;
+  const key=quiz.type==='review'?question.key:kind==='kana'
+    ?`kana|${question.script||state.script}|${question.character}`
+    :kind==='vocabulary'?`vocabulary|${question.character}|${question.meaning}`
+    :`kanji|${grade}|${question.character}`;
+  const previous=reviewCards[key]||{repetitions:0,correct:0,misses:0};
+  const now=Date.now();
+  if (correct) {
+    const repetitions=previous.repetitions+1;
+    const intervals=[1,3,7,14,30];
+    const intervalDays=intervals[Math.min(repetitions-1,intervals.length-1)];
+    reviewCards[key]={repetitions,correct:previous.correct+1,misses:previous.misses,dueAt:now+intervalDays*24*60*60*1000,lastReviewed:now,intervalDays};
+  } else {
+    reviewCards[key]={repetitions:0,correct:previous.correct,misses:previous.misses+1,dueAt:now,lastReviewed:now,intervalDays:0};
+  }
+  saveProgress();
+}
 function correctQuizAnswer(quiz,question) {
+  if (quiz.type==='review') return question.kind==='kana'?question.sound:question.meaning;
   return quiz.type==='kanji'||quiz.type==='vocabulary'?question.meaning:question.sound;
 }
 function sentencePracticePool() {
@@ -565,8 +756,24 @@ function startSentencePractice() {
   state.sentenceIndex=0;
   state.translationRevealed=false;
 }
+function prepareSentenceBuilder() {
+  const sentence=sentenceBuildingCards[state.builderQueue[state.builderIndex]];
+  state.builderSelected=[];
+  state.builderOrder=shuffle(sentence.parts.map((_,index)=>index));
+  state.builderChecked=null;
+}
+function startSentenceBuilder() {
+  state.builderQueue=shuffle(sentenceBuildingCards.map((_,index)=>index));
+  state.builderIndex=0;
+  prepareSentenceBuilder();
+}
+function nextSentenceBuilder() {
+  state.builderIndex++;
+  if (state.builderIndex>=state.builderQueue.length) startSentenceBuilder();
+  else prepareSentenceBuilder();
+}
 function renderPractice() {
-  const headings={characters:['Recognize Hiragana and Katakana.','Choose the sound that matches each kana character.'],vocabulary:['Practice everyday vocabulary.','Choose the English meaning of each word in kana.'],sentences:['Translate a simple sentence.','Try translating before revealing the reading and English.'],kanji:['Recognize Kanji by grade.','Choose the meaning of a kanji from the selected grade.']};
+  const headings={characters:['Recognize Hiragana and Katakana.','Choose the sound that matches each kana character.'],vocabulary:['Practice everyday vocabulary.','Choose the English meaning of each word in kana.'],sentences:['Translate a simple sentence.','Try translating before revealing the reading and English.'],kanji:['Recognize Kanji by grade.','Choose the meaning of a kanji from the selected grade.'],review:['Bring back what you have learned.','Review items you missed or are due to see again.'],builder:['Build a sentence, one word at a time.','Put familiar vocabulary and particles in the right order.']};
   const [title,description]=headings[state.practiceMode]||headings.characters;
   const heading=`<p class="greeting">れんしゅう / A little practice</p><div class="page-head"><div><h1>${title}</h1><p>${description}</p></div></div>`;
   if (state.practiceMode==='sentences') {
@@ -574,29 +781,47 @@ function renderPractice() {
     const sentence=state.sentenceQueue[state.sentenceIndex];
     return `${heading}<div class="practice-layout"><section class="practice-card sentence-practice-card" aria-label="Sentence translation practice"><div class="quiz-meta"><span>TRANSLATE THIS SENTENCE</span><span>Particle: <strong lang="ja">${sentence.particle}</strong></span></div><p class="sentence-practice-prompt">Try translating it before you reveal the answer. There is no score in this mode.</p><div class="sentence-practice-japanese" lang="ja">${sentence.jp}</div>${state.translationRevealed?`<div class="translation-reveal" role="status"><div><span class="eyebrow">READING</span><p class="sentence-practice-romaji">${sentence.romaji}</p></div><div><span class="eyebrow">ENGLISH TRANSLATION</span><p>${sentence.meaning}</p></div></div>`:`<button class="text-button reveal-translation" data-action="reveal-translation">Reveal reading &amp; translation ${icon('arrow')}</button>`}<button class="primary-button next-sentence" data-action="next-sentence">Next sentence ${icon('arrow')}</button></section></div>`;
   }
+  if (state.practiceMode==='builder') {
+    if (!state.builderQueue.length) startSentenceBuilder();
+    const card=sentenceBuildingCards[state.builderQueue[state.builderIndex]];
+    const target=card.parts.map((_,index)=>index);
+    const solved=state.builderSelected.join(',')===target.join(',');
+    const selected=state.builderSelected.length
+      ?state.builderSelected.map(index=>`<button class="builder-token selected" type="button" data-action="builder-remove" data-index="${index}" aria-label="Remove ${escapeText(card.parts[index])}">${escapeText(card.parts[index])} <span aria-hidden="true">×</span></button>`).join('')
+      :'<span class="builder-placeholder">Choose the first word</span>';
+    const used=new Set(state.builderSelected);
+    const choices=state.builderOrder.map(index=>`<button class="builder-token" type="button" data-action="builder-add" data-index="${index}" ${used.has(index)?'disabled':''}>${escapeText(card.parts[index])}</button>`).join('');
+    const answer=state.builderChecked&&solved?`<div class="translation-reveal" role="status"><div><span class="eyebrow">READING</span><p class="sentence-practice-romaji">${escapeText(card.romaji)}</p></div><div><span class="eyebrow">ENGLISH TRANSLATION</span><p>${escapeText(card.meaning)}</p></div></div>`:state.builderChecked===false?'<p class="builder-feedback" role="status">That order does not sound right yet. Remove a word and try again.</p>':'';
+    return `${heading}<div class="practice-layout"><section class="practice-card builder-card" aria-label="Sentence building practice"><div class="quiz-meta"><span>SENTENCE ${state.builderIndex+1} OF ${state.builderQueue.length}</span><span>No score</span></div><p class="sentence-practice-prompt">Choose the tiles in order. Tap a selected tile to remove it.</p><div class="builder-answer" aria-label="Your sentence">${selected}</div><div class="builder-choices" role="group" aria-label="Word and particle tiles">${choices}</div><div class="builder-actions"><button class="secondary-button" type="button" data-action="builder-reset">Clear</button><button class="secondary-button" type="button" data-action="builder-check" ${state.builderSelected.length!==card.parts.length||state.builderChecked&&solved?'disabled':''}>Check sentence</button><button class="${state.builderChecked&&solved?'primary-button':'text-button'}" type="button" data-action="builder-next">${state.builderChecked&&solved?'Next sentence':'Skip for now'} ${icon('arrow')}</button></div>${answer}</section></div>`;
+  }
+  const isReview=state.practiceMode==='review';
   const isKanji=state.practiceMode==='kanji';
   const isVocabulary=state.practiceMode==='vocabulary';
-  const quizType=isKanji?'kanji':isVocabulary?'vocabulary':'kana';
+  const quizType=isReview?'review':isKanji?'kanji':isVocabulary?'vocabulary':'kana';
   if (!state.quiz || state.quiz.type!==quizType || (isKanji&&state.quiz.grade!==state.practiceKanjiGrade)) {
-    if (isKanji) startKanjiQuiz();
+    if (isReview) startReviewQuiz();
+    else if (isKanji) startKanjiQuiz();
     else if (isVocabulary) startVocabularyQuiz();
     else startQuiz();
   }
   const quiz=state.quiz;
   const complete=quiz.index>=quiz.questions.length;
   const question=quiz.questions[quiz.index];
+  const questionIsKanji=isKanji||(isReview&&question?.kind==='kanji');
+  const questionIsVocabulary=isVocabulary||(isReview&&question?.kind==='vocabulary');
   const correctAnswer=question?correctQuizAnswer(quiz,question):'';
-  const questionDescription=isKanji?`Grade ${quiz.grade} · ${quiz.questions.length} randomized kanji`:isVocabulary?`${quiz.questions.length} randomized vocabulary words`:`${scriptName()} · ${quiz.questions.length} randomized characters`;
-  const modeControls=isKanji?`<div class="kanji-grade-tabs practice-kanji-grades" role="group" aria-label="Kanji practice grade">${[1,2,3,4,5,6].map(grade=>`<button class="kanji-grade-tab ${state.practiceKanjiGrade===grade?'active':''}" type="button" data-action="practice-kanji-grade" data-value="${grade}" aria-pressed="${state.practiceKanjiGrade===grade}">Grade ${grade}</button>`).join('')}</div>`:isVocabulary?'':scriptTabs();
-  const kanjiEntry=isKanji&&question?(window.kanjiData[quiz.grade]||[]).find(([character])=>character===question.character):null;
+  const questionDescription=isReview?`10 due and new review items · Grade ${state.practiceKanjiGrade} kanji`:isKanji?`Grade ${quiz.grade} · ${quiz.questions.length} randomized kanji`:isVocabulary?`${quiz.questions.length} randomized vocabulary words`:`${scriptName()} · ${quiz.questions.length} randomized characters`;
+  const modeControls=isKanji?`<div class="kanji-grade-tabs practice-kanji-grades" role="group" aria-label="Kanji practice grade">${[1,2,3,4,5,6].map(grade=>`<button class="kanji-grade-tab ${state.practiceKanjiGrade===grade?'active':''}" type="button" data-action="practice-kanji-grade" data-value="${grade}" aria-pressed="${state.practiceKanjiGrade===grade}">Grade ${grade}</button>`).join('')}</div>`:isVocabulary?'':isReview?'':scriptTabs();
+  const questionGrade=question?.grade||quiz.grade;
+  const kanjiEntry=questionIsKanji&&question?(window.kanjiData[questionGrade]||[]).find(([character])=>character===question.character):null;
   const kanjiReadings=kanjiEntry?`<button class="text-button kanji-reading-toggle" type="button" data-action="toggle-kanji-readings" aria-expanded="${state.kanjiReadingsRevealed}">${state.kanjiReadingsRevealed?'Hide':'Reveal'} On’yomi / Kun’yomi readings</button><div class="kanji-readings kanji-quiz-readings" ${state.kanjiReadingsRevealed?'':'hidden'}>${kanjiEntry[2]?`<p><span>On’yomi</span><strong lang="ja">${kanjiEntry[2]}</strong></p>`:''}${kanjiEntry[3]?`<p><span>Kun’yomi</span><strong lang="ja">${kanjiEntry[3]}</strong></p>`:''}${!kanjiEntry[2]&&!kanjiEntry[3]?'<p>No readings are listed for this character.</p>':''}</div>`:'';
-  const vocabularyReading=question&&isVocabulary?`<button class="text-button vocabulary-reading-toggle" type="button" data-action="toggle-vocabulary-reading" aria-expanded="${state.vocabularyReadingRevealed}">${state.vocabularyReadingRevealed?'Hide':'Reveal'} reading</button><p class="vocabulary-quiz-reading" ${state.vocabularyReadingRevealed?'':'hidden'}>${question.reading}</p>`:'';
-  const resultCopy=quiz.score===quiz.questions.length?(isKanji?'Every character found its meaning.':isVocabulary?'Every word found its meaning.':'Every sound found its place.'):'Keep coming back. Familiarity grows with practice.';
-  const quizLabel=isKanji?'Kanji meaning recognition quiz':isVocabulary?'Vocabulary meaning quiz':'Kana character recognition quiz';
-  const prompt=isKanji?'Which meaning matches this kanji?':isVocabulary?'What does this word mean?':'Which sound matches this character?';
+  const vocabularyReading=question&&questionIsVocabulary?`<button class="text-button vocabulary-reading-toggle" type="button" data-action="toggle-vocabulary-reading" aria-expanded="${state.vocabularyReadingRevealed}">${state.vocabularyReadingRevealed?'Hide':'Reveal'} reading</button><p class="vocabulary-quiz-reading" ${state.vocabularyReadingRevealed?'':'hidden'}>${question.reading}</p>`:'';
+  const resultCopy=isReview?'Review session complete. Missed items will come back soon.':quiz.score===quiz.questions.length?(isKanji?'Every character found its meaning.':isVocabulary?'Every word found its meaning.':'Every sound found its place.'):'Keep coming back. Familiarity grows with practice.';
+  const quizLabel=isReview?'Spaced review quiz':isKanji?'Kanji meaning recognition quiz':isVocabulary?'Vocabulary meaning quiz':'Kana character recognition quiz';
+  const prompt=isReview?(questionIsKanji?'Which meaning matches this kanji?':questionIsVocabulary?'What does this word mean?':'Which sound matches this character?'):isKanji?'Which meaning matches this kanji?':isVocabulary?'What does this word mean?':'Which sound matches this character?';
   return `${heading}<div class="practice-layout"><div class="practice-options"><p>${complete?'Session complete':questionDescription}</p>${modeControls}</div><section class="practice-card" aria-label="${quizLabel}">${complete?`
     <div class="completion-icon">${icon('trophy')}</div><h2 class="result-title">${quiz.score===quiz.questions.length?'Beautifully done!':'Another step forward.'}</h2><p class="result-description">${resultCopy}</p><div class="result-score">${quiz.score}<span class="muted"> / ${quiz.questions.length}</span></div><p class="muted">correct answers</p><div class="result-actions"><button class="secondary-button" data-action="view" data-value="lessons">Back to lessons</button><button class="primary-button" data-action="restart">Practice again ${icon('arrow')}</button></div>`:`
-    <div class="quiz-meta"><span>QUESTION ${quiz.index+1} OF ${quiz.questions.length}</span><span>${quiz.score} correct</span></div><div class="progress-track"><div class="progress-fill" style="width:${quiz.index/quiz.questions.length*100}%"></div></div><div class="quiz-character ${isVocabulary?'vocabulary-quiz-word':''}" lang="ja">${question.character}</div>${kanjiReadings}${vocabularyReading}<p class="quiz-prompt">${prompt}</p><div class="answer-grid">${question.options.map(option=>`<button class="answer-button ${quiz.answer!==null?(option===correctAnswer?'correct':option===quiz.answer?'wrong':''):''}" data-action="answer" data-value="${option}" ${quiz.answer!==null?'disabled':''}>${option}</button>`).join('')}</div><div class="quiz-feedback" role="status">${quiz.answer===null?'':quiz.answer===correctAnswer?'That’s right. Nicely done!':`This is “${correctAnswer}”. You’ll get it next time.`}</div>${quiz.answer!==null?`<button class="primary-button quiz-action" data-action="next-question">${quiz.index===quiz.questions.length-1?'See results':isKanji?'Next kanji':isVocabulary?'Next word':'Next character'} ${icon('arrow')}</button>`:''}`}</section></div>`;
+    <div class="quiz-meta"><span>QUESTION ${quiz.index+1} OF ${quiz.questions.length}</span><span>${quiz.score} correct</span></div><div class="progress-track"><div class="progress-fill" style="width:${quiz.index/quiz.questions.length*100}%"></div></div><div class="quiz-character ${questionIsVocabulary?'vocabulary-quiz-word':''}" lang="ja">${question.character}</div>${kanjiReadings}${vocabularyReading}<p class="quiz-prompt">${prompt}</p><div class="answer-grid">${question.options.map(option=>`<button class="answer-button ${quiz.answer!==null?(option===correctAnswer?'correct':option===quiz.answer?'wrong':''):''}" data-action="answer" data-value="${escapeText(option)}" ${quiz.answer!==null?'disabled':''}>${escapeText(option)}</button>`).join('')}</div><div class="quiz-feedback" role="status">${quiz.answer===null?'':quiz.answer===correctAnswer?'That’s right. Nicely done!':`This is “${correctAnswer}”. You’ll get it next time.`}</div>${quiz.answer!==null?`<button class="primary-button quiz-action" data-action="next-question">${quiz.index===quiz.questions.length-1?'See results':questionIsKanji?'Next kanji':questionIsVocabulary?'Next word':isReview?'Next item':'Next character'} ${icon('arrow')}</button>`:''}`}</section></div>`;
 }
 function renderProgress() {
   return `<div class="progress-view"><p class="greeting">一歩ずつ / One step at a time</p><div class="page-head"><div><h1>Your journey, so far.</h1><p>Every character is a small win worth keeping.</p></div></div><div class="progress-stats"><article class="stat">${icon('book')}<strong>${charactersForAllScripts().filter(character => learned.has(character)).length}<span class="muted" style="font-size:15px"> / 92</span></strong><p>Characters explored</p></article><article class="stat">${icon('flame')}<strong>${streak()}</strong><p>Day learning streak</p></article><article class="stat">${icon('target')}<strong>${state.quizzes}</strong><p>Practice sessions</p></article></div><div class="section-title"><h2>Your character collection</h2>${scriptTabs()}</div><div class="kana-chart">${characters().map(item => `<button class="chart-cell ${learned.has(item.character)?'learned':''}" data-action="open-character" data-row="${item.row}" data-index="${item.index}" aria-label="Study ${item.character}, ${item.sound}${learned.has(item.character)?', learned':''}"><span class="jp" lang="ja">${item.character}</span><small>${item.sound}</small></button>`).join('')}</div><p class="muted" style="font-size:11px">${countLearned()} of 46 ${scriptName().toLowerCase()} characters explored.</p></div>`;
@@ -646,6 +871,8 @@ app.addEventListener('click', event => {
       if (state.practiceMode==='sentences') startSentencePractice();
       else if (state.practiceMode==='kanji') startKanjiQuiz();
       else if (state.practiceMode==='vocabulary') startVocabularyQuiz();
+      else if (state.practiceMode==='review') startReviewQuiz();
+      else if (state.practiceMode==='builder') startSentenceBuilder();
       else startQuiz();
     } else if (!resume) rememberLearningPlace();
     window.scrollTo({top:0,behavior:'instant'});
@@ -665,6 +892,8 @@ app.addEventListener('click', event => {
     if (state.practiceMode==='sentences') startSentencePractice();
     else if (state.practiceMode==='kanji') startKanjiQuiz();
     else if (state.practiceMode==='vocabulary') startVocabularyQuiz();
+    else if (state.practiceMode==='review') startReviewQuiz();
+    else if (state.practiceMode==='builder') startSentenceBuilder();
     else startQuiz();
     rememberLearningPlace();
   }
@@ -679,6 +908,22 @@ app.addEventListener('click', event => {
     if (state.sentenceIndex>=state.sentenceQueue.length) startSentencePractice();
     else state.translationRevealed=false;
   }
+  if (action==='builder-add') {
+    const index=Number(button.dataset.index);
+    if (!state.builderSelected.includes(index)) state.builderSelected.push(index);
+    state.builderChecked=null;
+  }
+  if (action==='builder-remove') {
+    const index=Number(button.dataset.index);
+    state.builderSelected=state.builderSelected.filter(item=>item!==index);
+    state.builderChecked=null;
+  }
+  if (action==='builder-reset') { state.builderSelected=[]; state.builderChecked=null; }
+  if (action==='builder-check') {
+    const card=sentenceBuildingCards[state.builderQueue[state.builderIndex]];
+    state.builderChecked=state.builderSelected.length===card.parts.length&&state.builderSelected.every((index,position)=>index===position);
+  }
+  if (action==='builder-next') nextSentenceBuilder();
   if (action==='home') { event.preventDefault(); state.view='home'; state.practiceExpanded=false; }
   if (action==='toggle-lessons') state.lessonsExpanded=!state.lessonsExpanded;
   if (action==='view') {
@@ -705,11 +950,14 @@ app.addEventListener('click', event => {
     if (state.view==='lessons') rememberLearningPlace(); else saveProgress();
   }
   if (action==='open-character') { state.view='lessons'; state.lessonsExpanded=window.innerWidth>700; state.practiceExpanded=false; state.row=Number(button.dataset.row); state.char=Number(button.dataset.index); rememberLearningPlace(); window.scrollTo({top:0,behavior:'instant'}); }
-  if (action==='restart') { if (state.practiceMode==='kanji') startKanjiQuiz(); else if (state.practiceMode==='vocabulary') startVocabularyQuiz(); else startQuiz(); }
+  if (action==='restart') { if (state.practiceMode==='kanji') startKanjiQuiz(); else if (state.practiceMode==='vocabulary') startVocabularyQuiz(); else if (state.practiceMode==='review') startReviewQuiz(); else if (state.practiceMode==='builder') startSentenceBuilder(); else startQuiz(); }
   if (action==='answer') {
     if (!state.quiz || state.quiz.answer!==null) return;
     state.quiz.answer=button.dataset.value;
-    if (state.quiz.answer===correctQuizAnswer(state.quiz,state.quiz.questions[state.quiz.index])) state.quiz.score++;
+    const question=state.quiz.questions[state.quiz.index];
+    const correct=state.quiz.answer===correctQuizAnswer(state.quiz,question);
+    if (correct) state.quiz.score++;
+    rememberReviewAnswer(state.quiz,question,correct);
   }
   if (action==='next-question') {
     if (!state.quiz || state.quiz.answer===null) return;

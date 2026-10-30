@@ -12,7 +12,7 @@ A free, account-free introduction to Japanese. Open `index.html` in a modern bro
 - Particle guide covering common particles and their roles, with five vocabulary-based example sentences per particle. Reading and English translations are revealed on demand.
 - Kanji section with all 1,026 school-assigned characters across Grades 1–6, English meanings, common on’yomi in katakana, kun’yomi in hiragana, and five sentence examples per kanji. Example selection favors beginner-readable sentences and words already introduced in the app.
 - Character-recognition quizzes with feedback and session results. Each round randomly samples ten characters from the selected kana script.
-- Practice modes for randomized kana identification and sentence translation, with readings and translations revealed on demand and no translation score.
+- Practice modes for randomized kana and vocabulary identification, Kanji recognition, spaced review, sentence translation, and sentence building from a shuffled set of 100 beginner sentences. Review schedules missed items for another try and spaces correct answers over time. Sentence translation and building reveal readings and translations without scores.
 - Progress and learning streaks saved on the current browser and device with localStorage. Clearing browser data removes progress. Private browsing may not retain it.
 
 Audio uses the browser's Speech Synthesis API and requires an installed Japanese voice. Voice availability and offline behavior vary by device. The app displays an explanation when audio is unavailable.
