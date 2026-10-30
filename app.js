@@ -326,20 +326,12 @@ function kanjiCard([character,meaning,on,kun]) {
   return `<article class="kanji-card"><div class="kanji-card-head"><span class="kanji-character" lang="ja">${character}</span><div><span class="eyebrow">GRADE ${state.kanjiGrade}</span><h2>${meaning}</h2></div></div><div class="kanji-readings">${on?`<p><span>On’yomi</span><strong lang="ja">${on}</strong></p>`:''}${kun?`<p><span>Kun’yomi</span><strong lang="ja">${kun}</strong></p>`:''}</div><button class="particle-open-examples kanji-card-examples" type="button" data-action="kanji-examples" data-value="${character}" aria-label="View five example sentences for ${character}, ${meaning}">View 5 examples ${icon('arrow')}</button></article>`;
 }
 function renderKanjiExample(example,index) {
-  return `<article class="particle-example"><span class="eyebrow">EXAMPLE ${index+1}</span><p class="particle-japanese" lang="ja">${example.jp}</p><button class="text-button particle-example-reveal" data-action="reveal-particle-example" aria-expanded="false">Reveal reading &amp; English translation</button><div class="particle-example-answer" data-example-answer role="status" tabindex="-1" hidden><p class="kanji-example-reading" lang="ja">${example.reading}</p><p class="particle-meaning">${example.meaning}</p></div></article>`;
+  const sourceId=/^tatoeba-(\d+)$/.exec(example.source||'')?.[1];
+  const sourceLink=sourceId?`<a class="kanji-example-source" href="https://tatoeba.org/en/sentences/show/${sourceId}" target="_blank" rel="noopener noreferrer">Tatoeba source</a>`:'';
+  return `<article class="particle-example"><span class="eyebrow">EXAMPLE ${index+1}</span><p class="particle-japanese" lang="ja">${escapeText(example.jp)}</p><button class="text-button particle-example-reveal" data-action="reveal-particle-example" aria-expanded="false">Reveal reading &amp; English translation</button><div class="particle-example-answer" data-example-answer role="status" tabindex="-1" hidden><p class="kanji-example-reading" lang="ja">${escapeText(example.reading)}</p><p class="particle-meaning">${escapeText(example.meaning)}</p>${sourceLink}</div></article>`;
 }
 function kanjiExamplesFor([character,meaning,on,kun]) {
-  const readingSource=kun||on||'';
-  const reading=readingSource.split('・')[0].replace(/[〜~]/g,'')||character;
-  const meaningLabel=meaning.split(';')[0].trim();
-  const vocabularyExamples=[
-    {word:'ねこ',reading:'ねこ',jp:`ねこは「${character}」を見ます。`,kana:`ねこは「${reading}」をみます。`,translation:`The cat looks at “${meaningLabel}.”`},
-    {word:'いぬ',reading:'いぬ',jp:`いぬは「${character}」を見ます。`,kana:`いぬは「${reading}」をみます。`,translation:`The dog looks at “${meaningLabel}.”`},
-    {word:'いえ',reading:'いえ',jp:`いえで「${character}」を書きます。`,kana:`いえで「${reading}」をかきます。`,translation:`I write “${meaningLabel}” at home.`},
-    {word:'はな',reading:'はな',jp:`はなを見て、「${character}」を書きます。`,kana:`はなをみて、「${reading}」をかきます。`,translation:`I look at a flower, then write “${meaningLabel}.”`},
-    {word:'すし',reading:'すし',jp:`すしを食べて、「${character}」を書きます。`,kana:`すしをたべて、「${reading}」をかきます。`,translation:`I eat sushi, then write “${meaningLabel}.”`},
-  ];
-  return vocabularyExamples.filter(example=>vocabulary.some(word=>word.jp===example.word)).map(({jp,kana,translation})=>({jp,reading:kana,meaning:translation}));
+  return (window.kanjiExamples?.[character]||[]).map(([jp,reading,translation,source])=>({jp,reading,meaning:translation,source}));
 }
 function openKanjiExamples(character) {
   const kanji=(window.kanjiData[state.kanjiGrade]||[]).find(item=>item[0]===character);

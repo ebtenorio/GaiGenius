@@ -9,7 +9,7 @@ A free, account-free introduction to Japanese. Open `index.html` in a modern bro
 - Animated stroke order for all 92 kana, with play/pause, replay, and numbered writing steps. Reduced-motion preferences use static steps instead of animation.
 - 300 Japanese vocabulary entries across hiragana and katakana, with romaji, English meanings, search, and category filters. Includes 50 adjectives and 50 verbs in hiragana.
 - Particle guide covering common particles and their roles, with five vocabulary-based example sentences per particle. Reading and English translations are revealed on demand.
-- Kanji section with all 1,026 school-assigned characters across Grades 1–6, English meanings, common on’yomi in katakana, and kun’yomi in hiragana.
+- Kanji section with all 1,026 school-assigned characters across Grades 1–6, English meanings, common on’yomi in katakana, kun’yomi in hiragana, and five sentence examples per kanji.
 - Character-recognition quizzes with feedback and session results. Each round randomly samples ten characters from the selected kana script.
 - Practice modes for randomized kana identification and sentence translation, with readings and translations revealed on demand and no translation score.
 - Progress and learning streaks saved on the current browser and device with localStorage. Clearing browser data removes progress. Private browsing may not retain it.
@@ -24,10 +24,12 @@ The core app works offline after the files are downloaded. Google Fonts and the 
 - `styles.css`: responsive layout and presentation.
 - `app.js`: lesson and vocabulary data, rendering, practice, speech, and local progress.
 - `kanji-data.js`: Grade 1–6 kanji, meanings, and kana readings.
+- `kanji-examples.js`: five Japanese–English sentence examples and kana readings per Grade 1–6 kanji.
 - `writing.js`: numbered writing guides and stroke playback.
 - `vendor/lucide.min.js`: pinned Lucide 0.468.0 icons (ISC license, included in the library).
 - `vendor/kana-strokes.js`: locally bundled ordered stroke paths and number positions.
 - `scripts/build-kana-data.ps1`: reproducible KanjiVG importer; optionally pass `-Revision` to select a source commit.
+- `scripts/build-kanji-examples.py`: builds the kanji sentence data from the Tatoeba sentence export and KANJIDIC2-derived grade list; it uses pykakasi to add kana readings.
 
 ## Stroke Data Attribution
 
@@ -37,4 +39,6 @@ The current curriculum covers basic kana and all six elementary school kanji gra
 
 Kanji grade allocations follow the current [MEXT curriculum allocation](https://www.mext.go.jp/content/1384661_4_1_1.pdf). Meanings and readings for Grades 3–6 are derived from [KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC2), copyright Electronic Dictionary Research and Development Group (EDRDG), under the [EDRDG licence](https://www.edrdg.org/edrdg/licence.html). Grade 1–2 common readings retain the existing curated sources: a [Grade 1 reading list](https://family-life.work/study/sho/resources/pdf/kanji/kanjiList-sho1.pdf) and a [Grade 2 reading list](https://minkan.co.jp/others/ps2/). On’yomi readings are shown in katakana and kun’yomi readings in hiragana; these are common readings, not an exhaustive list.
 
-To publish, upload `index.html`, `styles.css`, `app.js`, `writing.js`, `kanji-data.js`, and the `vendor` directory to any static web host, such as GitHub Pages, Netlify, or Cloudflare Pages. The importer script is not needed at runtime.
+Kanji sentence examples are selected from the editor-curated Japanese–English examples of the [Tatoeba Project](https://tatoeba.org/), under [CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/). Tatoeba sentence IDs are retained and linked from each revealed example. The app adds kana readings to the selected sentences. A small number of examples for characters with limited corpus coverage were written for this project.
+
+To publish, upload `index.html`, `styles.css`, `app.js`, `writing.js`, `kanji-data.js`, `kanji-examples.js`, and the `vendor` directory to any static web host, such as GitHub Pages, Netlify, or Cloudflare Pages. The importer scripts are not needed at runtime.
