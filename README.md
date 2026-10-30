@@ -23,13 +23,12 @@ The core app works offline after the files are downloaded. Google Fonts and the 
 - `index.html`: document, metadata, fonts, and entry point.
 - `styles.css`: responsive layout and presentation.
 - `app.js`: lesson and vocabulary data, rendering, practice, speech, and local progress.
-- `kanji-data.js`: Grade 1–6 kanji, meanings, and kana readings.
-- `kanji-examples.js`: five Japanese–English sentence examples and kana readings per Grade 1–6 kanji.
+- `kanji-data.js`: Grade 1–6 kanji, meanings, kana readings, and five Japanese–English example sentences per kanji.
 - `writing.js`: numbered writing guides and stroke playback.
 - `vendor/lucide.min.js`: pinned Lucide 0.468.0 icons (ISC license, included in the library).
 - `vendor/kana-strokes.js`: locally bundled ordered stroke paths and number positions.
 - `scripts/build-kana-data.ps1`: reproducible KanjiVG importer; optionally pass `-Revision` to select a source commit.
-- `scripts/build-kanji-examples.py`: builds the kanji sentence data from the Tatoeba sentence export and KANJIDIC2-derived grade list; it uses pykakasi to add kana readings.
+- `scripts/build-kanji-examples.py`: adds the example sentences to `kanji-data.js` from the Tatoeba sentence export and KANJIDIC2-derived grade list; it uses pykakasi to add kana readings.
 
 ## Stroke Data Attribution
 
@@ -41,4 +40,4 @@ Kanji grade allocations follow the current [MEXT curriculum allocation](https://
 
 Kanji sentence examples are selected from the editor-curated Japanese–English examples of the [Tatoeba Project](https://tatoeba.org/), under [CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/). Tatoeba sentence IDs are retained and linked from each revealed example. The app adds kana readings to the selected sentences. A small number of examples for characters with limited corpus coverage were written for this project.
 
-To publish, upload `index.html`, `styles.css`, `app.js`, `writing.js`, `kanji-data.js`, `kanji-examples.js`, and the `vendor` directory to any static web host, such as GitHub Pages, Netlify, or Cloudflare Pages. The importer scripts are not needed at runtime.
+To publish, upload `index.html`, `styles.css`, `app.js`, `writing.js`, `kanji-data.js`, and the `vendor` directory to any static web host, such as GitHub Pages, Netlify, or Cloudflare Pages. The importer scripts are not needed at runtime.

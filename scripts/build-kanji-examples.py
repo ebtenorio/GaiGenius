@@ -172,9 +172,14 @@ def main():
     if shortages:
         raise ValueError(f"Every kanji must have five examples; remaining shortages: {shortages[:20]}")
 
+    existing_data = args.output.read_text(encoding="utf-8")
+    marker = "\nwindow.kanjiExamples = "
+    if marker in existing_data:
+        existing_data = existing_data.split(marker, 1)[0]
     args.output.write_text(
-        "// Tatoeba example sentences (CC BY 2.0 FR; sentence IDs retained for attribution).\n"
-        "window.kanjiExamples = " + json.dumps(output, ensure_ascii=False, separators=(",", ":")) + ";\n",
+        existing_data.rstrip()
+        + "\n\n// Tatoeba example sentences (CC BY 2.0 FR; sentence IDs retained for attribution).\n"
+        + "window.kanjiExamples = " + json.dumps(output, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
         newline="\n",
     )
